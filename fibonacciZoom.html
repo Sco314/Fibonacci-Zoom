@@ -271,24 +271,32 @@ html, body {
   margin-bottom: 8px;
 }
 .user-avatar {
-  width: 28px; height: 28px; border-radius: 50%;
-  object-fit: cover; border: 1px solid var(--border);
+  width: 34px; height: 34px; border-radius: 50%;
+  object-fit: cover; border: 2px solid var(--amber);
   flex-shrink: 0;
 }
 .user-name {
-  font-size: 12px; color: var(--txt);
+  font-size: 15px; color: var(--txt);
   font-weight: 600; flex: 1;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .user-score {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px; color: var(--amber);
+  font-size: 13px; color: var(--amber);
+  font-weight: 600;
+  margin-top: 2px;
+}
+.user-fib-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--amber-l);
+  margin-top: 1px;
+  word-break: break-all;
 }
 .signout-btn {
   background: none; border: none; cursor: pointer;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px; color: var(--txt3);
-  padding: 0; text-decoration: underline;
+  font-size: 11px; color: var(--txt3);
+  padding: 4px 0 0; text-decoration: underline;
 }
 .signout-btn:hover { color: var(--txt2); }
 
@@ -319,8 +327,13 @@ html, body {
 .lb-name.is-me { color: var(--amber); font-weight: 600; }
 .lb-score {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; color: var(--txt);
+  font-size: 10px; color: var(--txt);
   font-weight: 600;
+  flex-shrink: 0;
+  max-width: 70px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lb-empty {
   font-size: 11px; color: var(--txt3);
@@ -519,9 +532,10 @@ html, body {
         <div id="signedIn" style="display:none">
           <div class="user-row">
             <img class="user-avatar" id="userAvatar" src="" alt="">
-            <div>
+            <div style="flex:1;min-width:0;">
               <div class="user-name" id="userName"></div>
-              <div class="user-score">Best: n=<span id="userBest">—</span></div>
+              <div class="user-score">Best: F(<span id="userBestN">—</span>)</div>
+              <div class="user-fib-value" id="userBestFib"></div>
             </div>
           </div>
           <button class="signout-btn" id="signOutBtn">sign out</button>
@@ -570,7 +584,7 @@ const SCROLL_THR = 40;   // px scroll per tick
 
 // ─── State ────────────────────────────────────────────────────────
 const state = {
-  n: 8,
+  n: 1,
 
   // Mode: 'standard' | 'fib-steps'
   // fib-steps: advancing to targetN requires Math.max(1,|targetN|) ticks
@@ -583,7 +597,7 @@ const state = {
   showFibSpiral:    true,
   showNegative:     true,
   nlFreeScroll:     false,   // admin toggle — allow dragging to uneached n
-  highestAbsN:      8,       // highest |n| reached via legitimate input
+  highestAbsN:      1,       // highest |n| reached via legitimate input
 
   // Spiral pan
   panX: 0, panY: 0,
@@ -1284,12 +1298,12 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
 
 // ─── Reset ───────────────────────────────────────────────────────
 document.getElementById('resetBtn').addEventListener('click', () => {
-  state.n = 8; state.subStep = 0; state.stepDir = 1;
-  state.rotation = 0; state.highestAbsN = 8;
+  state.n = 1; state.subStep = 0; state.stepDir = 1;
+  state.rotation = 0; state.highestAbsN = 1;
   state.panX = 0; state.panY = 0;
   scrollAccum = 0;
   closeOverlay('settingsOverlay');
-  centerNlOn(8);
+  centerNlOn(1);
   drawSpiral(); drawNumberLine(); updateModeInfo();
 });
 
@@ -1409,12 +1423,13 @@ async function onSignIn(user) {
     if (doc.exists) {
       const data = doc.data();
       userBestAbsN = data.absN || 0;
-      document.getElementById('userBest').textContent = data.n ?? '—';
+      updateUserBestDisplay(data.n);
       // Restore last n
       if (data.n !== undefined && data.n !== null) {
-        state.n        = data.n;
-        state.rotation = 0;
-        state.subStep  = 0;
+        state.n          = data.n;
+        state.highestAbsN = Math.max(state.highestAbsN, Math.abs(data.n));
+        state.rotation   = 0;
+        state.subStep    = 0;
         centerNlOn(state.n);
         drawSpiral();
         drawNumberLine();
@@ -1423,7 +1438,7 @@ async function onSignIn(user) {
       }
     } else {
       userBestAbsN = 0;
-      document.getElementById('userBest').textContent = '—';
+      updateUserBestDisplay(null);
     }
   } catch (err) {
     console.error('❌ Error loading score:', err.message);
@@ -1435,6 +1450,31 @@ function onSignOut() {
   userBestAbsN = 0;
   document.getElementById('signedOut').style.display = 'block';
   document.getElementById('signedIn').style.display  = 'none';
+  // Reset to default starting position for new/signed-out users
+  state.n = 1; state.subStep = 0; state.stepDir = 1;
+  state.rotation = 0; state.highestAbsN = 1;
+  state.panX = 0; state.panY = 0;
+  centerNlOn(1);
+  drawSpiral(); drawNumberLine(); updateModeInfo();
+}
+
+// ─── Display helpers ─────────────────────────────────────────────
+function updateUserBestDisplay(n) {
+  const nEl  = document.getElementById('userBestN');
+  const fEl  = document.getElementById('userBestFib');
+  if (n === null || n === undefined) {
+    nEl.textContent = '—';
+    fEl.textContent = '';
+  } else {
+    nEl.textContent = n;
+    const fibVal = fmt(fib(n));
+    fEl.textContent = '= ' + (fibVal.length > 20 ? fibVal.slice(0,18) + '…' : fibVal);
+  }
+}
+
+function fibDisplayStr(n) {
+  const v = fmt(fib(n));
+  return v.length > 12 ? v.slice(0,10) + '…' : v;
 }
 
 // ─── Save score ──────────────────────────────────────────────────
@@ -1444,17 +1484,18 @@ async function maybeSaveScore(n) {
   const absN = Math.abs(n);
   if (absN <= userBestAbsN) return;   // not a new best, skip write
   userBestAbsN = absN;
-  document.getElementById('userBest').textContent = n;
+  updateUserBestDisplay(n);
   try {
     await fbDb.collection('scores').doc(currentUser.uid).set({
       n,
       absN,
+      fibDisplay: fibDisplayStr(n),
       displayName: currentUser.displayName || currentUser.email,
       photoURL:    currentUser.photoURL    || '',
       uid:         currentUser.uid,
       updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
     });
-    console.log(`✅ Score saved: n=${n}`);
+    console.log(`✅ Score saved: n=${n}, F(n)=${fmt(fib(n))}`);
   } catch (err) {
     console.error('❌ Error saving score:', err.message);
   }
@@ -1488,16 +1529,20 @@ function renderLeaderboard(rows) {
   const medal     = i => ['🥇','🥈','🥉'][i] ?? `${i+1}.`;
   const isMe = row => currentUser && row.uid === currentUser.uid;
 
-  list.innerHTML = rows.map((row, i) => `
+  list.innerHTML = rows.map((row, i) => {
+    // Compute F(n) client-side for display (fibDisplay may not be stored yet)
+    let fibStr;
+    try { fibStr = fibDisplayStr(row.n); } catch(e) { fibStr = 'F(' + row.n + ')'; }
+    return `
     <div class="lb-row">
       <div class="lb-rank ${rankClass(i)}">${medal(i)}</div>
       ${row.photoURL
         ? `<img class="lb-avatar" src="${row.photoURL}" alt="" referrerpolicy="no-referrer">`
         : `<div class="lb-avatar"></div>`}
       <div class="lb-name ${isMe(row) ? 'is-me' : ''}">${escHtml(row.displayName || 'Anonymous')}</div>
-      <div class="lb-score">n=${row.n}</div>
-    </div>
-  `).join('');
+      <div class="lb-score" title="n=${row.n}">${fibStr}</div>
+    </div>`;
+  }).join('');
 
   document.getElementById('lbStatus').textContent =
     `${rows.length} player${rows.length !== 1 ? 's' : ''}`;
