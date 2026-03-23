@@ -16,8 +16,8 @@ Built for mathematics education — designed for high school and college student
 - **Two modes:**
   - **Standard** — one click advances one step
   - **Fib Steps** — advancing to index n requires exactly F(|n|) clicks, making the effort proportional to the number itself
-- **Live leaderboard** — Google sign-in via Firebase, scores saved per user, top 10 displayed in real time
-- **Progress restored** — sign in and the app jumps back to your last reached index
+- **Live leaderboard** — Google sign-in via Firebase, scores saved per user, top 10 displayed in real time with actual Fibonacci values
+- **Progress restored** — sign in and the app jumps back to your last reached index; new users start at F(1) = 1
 
 ---
 
@@ -43,10 +43,10 @@ This is intentionally a **single HTML file** — no build tools, no bundler, no 
 
 ```
 fibonacci-zoom/
-├── fibonacci-visualizer.html   ← the entire app
-├── README.md                   ← this file
-├── CLAUDE.md                   ← context file for Claude Code sessions
-└── LICENSE                     ← GPL-3.0
+├── fibonacciZoom.html   ← the entire app
+├── README.md            ← this file
+├── CLAUDE.md            ← context file for Claude Code sessions
+└── LICENSE              ← GPL-3.0
 ```
 
 Firebase SDKs are loaded from Google's CDN via `<script>` tags. No local dependencies.
@@ -90,6 +90,7 @@ One document per user in the `scores` collection, keyed by UID:
 scores/{uid} = {
   n:           62,                    // last best index (can be negative)
   absN:        62,                    // |n|, used for leaderboard sort
+  fibDisplay:  "4,052,739,537,881",   // F(n) truncated for display
   displayName: "Scott Sandvik",
   photoURL:    "https://...",
   uid:         "abc123",

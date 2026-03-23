@@ -6,7 +6,7 @@ This file is for Claude Code. Read it at the start of every session before touch
 
 ## Project overview
 
-Single-file web app (`fibonacci-visualizer.html`). No bundler, no npm, no build step. Everything — HTML, CSS, JS, Firebase SDK script tags — lives in one file. Do not introduce a build system or split into multiple files unless explicitly asked.
+Single-file web app (`fibonacciZoom.html`). No bundler, no npm, no build step. Everything — HTML, CSS, JS, Firebase SDK script tags — lives in one file. Do not introduce a build system or split into multiple files unless explicitly asked.
 
 **Owner:** Scott Sandvik (scottsandvik@gmail.com / ssandvik@gmail.com)  
 **Firebase project:** fibonacci-zoom (ID: fibonacci-zoom)  
@@ -99,7 +99,7 @@ The golden spiral was removed because it cannot be correctly anchored without so
 ## State object — full reference
 ```js
 state = {
-  n:             8,        // current Fibonacci index (integer, can be negative)
+  n:             1,        // current Fibonacci index (integer, can be negative); new users start at 1
   mode:          'fib-steps', // 'standard' | 'fib-steps'
   subStep:       0,        // ticks accumulated toward next n in fib-steps mode
   stepDir:       1,        // +1 or -1, direction of current accumulation
@@ -110,7 +110,7 @@ state = {
   showNegative:  true,     // settings — red coloring for negative n
 
   nlFreeScroll:  false,    // admin — bypasses highestAbsN drag boundary
-  highestAbsN:   8,        // high-water mark, only updated by commitN()
+  highestAbsN:   1,        // high-water mark, only updated by commitN()
 
   panX: 0, panY: 0,        // spiral canvas pan offset (world coords)
   rotation: 0,             // accumulated rotation in radians (±π/2 per commit)
@@ -147,6 +147,8 @@ state = {
 | `updateModeInfo()` | Updates modeInfo text in settings overlay |
 | `updateFooter()` | Updates zoomLbl span in canvas footer |
 | `maybeSaveScore(n)` | Firebase write — only if |n| > userBestAbsN, no-op if not signed in |
+| `updateUserBestDisplay(n)` | Updates Account card to show F(n) value with the best score |
+| `fibDisplayStr(n)` | Returns truncated comma-formatted F(n) string for leaderboard/UI |
 
 ---
 
@@ -175,8 +177,9 @@ Firebase compat v10 loaded via CDN (not npm). Global `firebase` object available
 
 ### Collections
 ```
-scores/{uid}  →  { n, absN, displayName, photoURL, uid, updatedAt }
+scores/{uid}  →  { n, absN, fibDisplay, displayName, photoURL, uid, updatedAt }
 ```
+`fibDisplay` is the truncated F(n) string for leaderboard display.
 `absN` is used for leaderboard ordering. `n` is the actual value (can be negative). Only one document per user — upserted on each new best.
 
 ### Auth flow
