@@ -534,7 +534,7 @@ html, body {
             <img class="user-avatar" id="userAvatar" src="" alt="">
             <div style="flex:1;min-width:0;">
               <div class="user-name" id="userName"></div>
-              <div class="user-score">Best: F(<span id="userBestN">—</span>)</div>
+              <div class="user-score" id="userBestScore">Best: —</div>
               <div class="user-fib-value" id="userBestFib"></div>
             </div>
           </div>
@@ -836,8 +836,27 @@ function drawSpiral() {
   const absN    = Math.abs(n);
   const isNeg   = n < 0;
   const maxFib  = Math.max(1, Number(fibPos(Math.max(1, absN))));
-  // Scale based on current n — lookahead squares overflow canvas naturally
-  const baseScale = Math.min(W, H) * 0.55 / maxFib;
+  const snapScale = Math.min(W, H) * 0.55 / maxFib;
+
+  // Progress toward next n (for ghost square materialising + smooth zoom)
+  const targetN     = n + state.stepDir;
+  const stepsNeeded = stepsForN(targetN);
+  const progress    = stepsNeeded > 0 ? Math.min(state.subStep / stepsNeeded, 1) : 0;
+
+  // Smooth zoom: interpolate scale toward next n's scale during sub-steps
+  let baseScale;
+  if (state.mode === 'fib-steps' && progress > 0) {
+    const nextAbsN   = Math.abs(targetN);
+    const nextMaxFib = Math.max(1, Number(fibPos(Math.max(1, nextAbsN))));
+    const nextScale  = Math.min(W, H) * 0.55 / nextMaxFib;
+    // Ease-in-out for organic feel
+    const eased = progress < 0.5
+      ? 2 * progress * progress
+      : -1 + (4 - 2 * progress) * progress;
+    baseScale = snapScale + (nextScale - snapScale) * eased;
+  } else {
+    baseScale = snapScale;
+  }
 
   // Current committed squares
   const squares = buildSquares(n, baseScale);
@@ -851,11 +870,6 @@ function drawSpiral() {
   const sq0  = squares[0];
   const eyeX = sq0.x + sq0.size;
   const eyeY = sq0.y + sq0.size;
-
-  // Progress toward next n (for ghost square materialising)
-  const targetN     = n + state.stepDir;
-  const stepsNeeded = stepsForN(targetN);
-  const progress    = stepsNeeded > 0 ? Math.min(state.subStep / stepsNeeded, 1) : 0;
 
   // Rotation: state.rotation is the committed total (grows by π/2 each step).
   // In fib-steps mode, progress smoothly rotates toward the next π/2 increment.
@@ -929,7 +943,8 @@ function drawSpiral() {
     if (state.showFibSpiral) {
       const { ax, ay, sa } = arcParams(gSq, gi);
       ctx.beginPath();
-      ctx.arc(ax, ay, gSq.size, sa, sa + (Math.PI / 2) * progress);
+      // Grow from existing spiral tip (sa + π/2) outward toward new tip (sa)
+      ctx.arc(ax, ay, gSq.size, sa + (Math.PI / 2) * (1 - progress), sa + Math.PI / 2);
       ctx.strokeStyle = `rgba(241,245,249,${progress * 0.7})`;
       ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.stroke();
     }
@@ -1417,29 +1432,47 @@ async function onSignIn(user) {
   document.getElementById('userAvatar').src = user.photoURL || '';
   document.getElementById('userName').textContent    = user.displayName || user.email;
 
+  // Capture guest progress before loading saved data
+  const guestN    = state.n;
+  const guestAbsN = Math.abs(guestN);
+
   // Load saved progress
   try {
     const doc = await fbDb.collection('scores').doc(user.uid).get();
     if (doc.exists) {
       const data = doc.data();
       userBestAbsN = data.absN || 0;
-      updateUserBestDisplay(data.n);
-      // Restore last n
-      if (data.n !== undefined && data.n !== null) {
+
+      // Keep whichever is further: guest progress or saved progress
+      if (guestAbsN > userBestAbsN) {
+        // Guest got further than saved — keep current position and save it
+        state.highestAbsN = Math.max(state.highestAbsN, guestAbsN);
+        updateUserBestDisplay(guestN);
+        console.log(`✅ Keeping guest progress n=${guestN} (beats saved n=${data.n}) for ${user.displayName}`);
+        maybeSaveScore(guestN);
+      } else if (data.n !== undefined && data.n !== null) {
+        // Saved is further — restore it
         state.n          = data.n;
         state.highestAbsN = Math.max(state.highestAbsN, Math.abs(data.n));
         state.rotation   = 0;
         state.subStep    = 0;
         centerNlOn(state.n);
-        drawSpiral();
-        drawNumberLine();
-        updateModeInfo();
+        updateUserBestDisplay(data.n);
         console.log(`✅ Restored n=${data.n} for ${user.displayName}`);
       }
     } else {
+      // New user — save guest progress if they've moved beyond n=1
       userBestAbsN = 0;
-      updateUserBestDisplay(null);
+      if (guestAbsN > 0) {
+        updateUserBestDisplay(guestN);
+        maybeSaveScore(guestN);
+      } else {
+        updateUserBestDisplay(null);
+      }
     }
+    drawSpiral();
+    drawNumberLine();
+    updateModeInfo();
   } catch (err) {
     console.error('❌ Error loading score:', err.message);
   }
@@ -1460,15 +1493,16 @@ function onSignOut() {
 
 // ─── Display helpers ─────────────────────────────────────────────
 function updateUserBestDisplay(n) {
-  const nEl  = document.getElementById('userBestN');
-  const fEl  = document.getElementById('userBestFib');
+  const scoreEl = document.getElementById('userBestScore');
+  const fibEl   = document.getElementById('userBestFib');
   if (n === null || n === undefined) {
-    nEl.textContent = '—';
-    fEl.textContent = '';
+    scoreEl.textContent = 'Best: —';
+    fibEl.textContent   = '';
   } else {
-    nEl.textContent = n;
     const fibVal = fmt(fib(n));
-    fEl.textContent = '= ' + (fibVal.length > 20 ? fibVal.slice(0,18) + '…' : fibVal);
+    const truncated = fibVal.length > 20 ? fibVal.slice(0,18) + '…' : fibVal;
+    scoreEl.textContent = 'Best: ' + truncated;
+    fibEl.textContent   = 'F(' + n + ')';
   }
 }
 

@@ -91,6 +91,14 @@ ctx.translate(-eyeX + panX, -eyeY + panY);  // eye → origin + pan
 ```
 The rotation pivot is always canvas centre. `state.rotation` accumulates `±π/2` per commit. This is correct. Do not add extra translate calls.
 
+### Smooth zoom (fib-steps mode)
+In fib-steps mode, `baseScale` is interpolated between the current level's scale and the next level's scale using eased progress:
+```js
+const eased = progress < 0.5 ? 2*progress*progress : -1+(4-2*progress)*progress;
+baseScale = snapScale + (nextScale - snapScale) * eased;
+```
+This parallels the smooth rotation via `inProgressRot`. Eye coordinates follow naturally since they are derived from `buildSquares(n, baseScale)`.
+
 ### Golden spiral — REMOVED intentionally
 The golden spiral was removed because it cannot be correctly anchored without solving for the true irrational convergence point of the Fibonacci tiling (approximately (0.5964·scale, 0.228·scale), derived from solving `|P_k - C| / |P_{k+1} - C| = φ`). A misaligned golden spiral misleads rather than illustrates. Do not re-add it unless the math is properly derived.
 
@@ -185,8 +193,8 @@ scores/{uid}  →  { n, absN, fibDisplay, displayName, photoURL, uid, updatedAt 
 ### Auth flow
 1. `initFirebase()` called at boot
 2. `fbAuth.onAuthStateChanged` drives all UI state
-3. On sign-in: load saved `n`, restore if present
-4. On sign-out: clear currentUser, reset UI
+3. On sign-in: compare guest progress vs saved — keep whichever is further, save guest progress if it beats stored best
+4. On sign-out: clear currentUser, reset to n=1
 
 ### Score save trigger
 `commitN()` calls `maybeSaveScore(newN)`. Writes only if `Math.abs(newN) > userBestAbsN`. Rate of writes is naturally low.
@@ -214,6 +222,10 @@ There is no password protection on admin controls — they are teacher/instructo
 ## Known issues and incomplete items
 
 - **Rotation not working** — `state.rotation` accumulates correctly and `rotAngle = state.rotation + inProgressRot` is computed, but the visual rotation may not be perceptible. Investigation needed. The transform order is: translate(W/2,H/2) → rotate(rotAngle) → translate(-eye+pan). Verify that `state.rotation` is actually non-zero after several commits by checking the footer readout.
+
+- **Smooth zoom interpolation** — In fib-steps mode, `baseScale` is now interpolated between the current n's scale and the next n's scale using an ease-in-out curve tied to sub-step progress. This eliminates the hard zoom jump at each level transition. The interpolation parallels the existing smooth rotation (`inProgressRot`).
+
+- **Ghost arc direction** — The ghost arc (partial quarter-circle during sub-steps) grows from the existing spiral tip outward, using `ctx.arc(ax, ay, r, sa + π/2*(1-progress), sa + π/2)`. At progress=0 it's zero-length at the connection point; at progress=1 it's the full arc ready to commit.
 
 - **Negative n tiling** — For negative n, `buildSquares` uses `fibPos(k)` (absolute sizes) and labels squares with `fib(-k)`, giving correct values with sign. The visual geometry is identical to positive n (same square sizes) with only color difference. This is a known simplification — a true "negative" tiling would spiral the other direction geometrically.
 
