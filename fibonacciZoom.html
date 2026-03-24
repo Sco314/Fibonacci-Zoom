@@ -286,12 +286,8 @@ html, body {
   font-weight: 600;
   margin-top: 2px;
 }
-.user-fib-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; color: var(--amber-l);
-  margin-top: 1px;
-  word-break: break-all;
-}
+/* admin visibility: hide admin sections when user is not admin */
+.admin-hidden [data-admin="true"] { display: none !important; }
 .signout-btn {
   background: none; border: none; cursor: pointer;
   font-family: 'JetBrains Mono', monospace;
@@ -429,7 +425,7 @@ html, body {
 
   <!-- Unified Settings overlay -->
   <div class="overlay-backdrop" id="settingsOverlay">
-    <div class="overlay-panel">
+    <div class="overlay-panel admin-hidden" id="settingsPanel">
       <button class="overlay-close" id="settingsClose">✕</button>
       <div class="overlay-title">⚙️ Settings</div>
 
@@ -441,36 +437,42 @@ html, body {
         </div>
       </div>
 
-      <div class="overlay-section" style="margin-top:16px;">Visualization <span class="admin-badge" style="margin-left:6px;">ADMIN</span></div>
-      <div class="toggle-group">
-        <div class="toggle-item" data-key="showSquares">
-          <div class="toggle-sw on"></div>
-          <span class="toggle-lbl">Show Squares</span>
-        </div>
-        <div class="toggle-item" data-key="showNumbers">
-          <div class="toggle-sw on"></div>
-          <span class="toggle-lbl">Show Numbers</span>
-        </div>
-        <div class="toggle-item" data-key="showFibSpiral">
-          <div class="toggle-sw on"></div>
-          <span class="toggle-lbl">Fibonacci Spiral</span>
+      <div data-admin="true">
+        <div class="overlay-section" style="margin-top:16px;">Visualization <span class="admin-badge" style="margin-left:6px;">ADMIN</span></div>
+        <div class="toggle-group">
+          <div class="toggle-item" data-key="showSquares">
+            <div class="toggle-sw on"></div>
+            <span class="toggle-lbl">Show Squares</span>
+          </div>
+          <div class="toggle-item" data-key="showNumbers">
+            <div class="toggle-sw on"></div>
+            <span class="toggle-lbl">Show Numbers</span>
+          </div>
+          <div class="toggle-item" data-key="showFibSpiral">
+            <div class="toggle-sw on"></div>
+            <span class="toggle-lbl">Fibonacci Spiral</span>
+          </div>
         </div>
       </div>
 
-      <div class="overlay-section" style="margin-top:16px;">Mode <span class="admin-badge" style="margin-left:6px;">ADMIN</span></div>
-      <div class="mode-btns">
-        <button class="mode-btn" data-mode="standard">Standard</button>
-        <button class="mode-btn active" data-mode="fib-steps">Fib Steps</button>
-      </div>
-      <div class="mode-info" id="modeInfo">—</div>
-
-      <div class="overlay-section" style="margin-top:16px;">Number Line</div>
-      <div class="admin-unlock-row">
-        <div class="toggle-item" data-key="nlFreeScroll" style="flex:1">
-          <div class="toggle-sw"></div>
-          <span class="toggle-lbl">Free drag to any n</span>
+      <div data-admin="true">
+        <div class="overlay-section" style="margin-top:16px;">Mode <span class="admin-badge" style="margin-left:6px;">ADMIN</span></div>
+        <div class="mode-btns">
+          <button class="mode-btn" data-mode="standard">Standard</button>
+          <button class="mode-btn active" data-mode="fib-steps">Fib Steps</button>
         </div>
-        <span class="admin-badge">ADMIN</span>
+        <div class="mode-info" id="modeInfo">—</div>
+      </div>
+
+      <div data-admin="true">
+        <div class="overlay-section" style="margin-top:16px;">Number Line</div>
+        <div class="admin-unlock-row">
+          <div class="toggle-item" data-key="nlFreeScroll" style="flex:1">
+            <div class="toggle-sw"></div>
+            <span class="toggle-lbl">Free drag to any n</span>
+          </div>
+          <span class="admin-badge">ADMIN</span>
+        </div>
       </div>
 
       <div class="btn-row" style="padding-top:14px; margin-top:4px;">
@@ -535,7 +537,6 @@ html, body {
             <div style="flex:1;min-width:0;">
               <div class="user-name" id="userName"></div>
               <div class="user-score" id="userBestScore">Best: —</div>
-              <div class="user-fib-value" id="userBestFib"></div>
             </div>
           </div>
           <button class="signout-btn" id="signOutBtn">sign out</button>
@@ -1372,6 +1373,19 @@ const FIREBASE_CONFIG = {
   appId:             "1:278440000838:web:5a5ef198f1808432557947"
 };
 
+// ─── Admin whitelist ─────────────────────────────────────────────
+const ADMIN_EMAILS = ['scottsandvik@gmail.com', 'ssandvik@hisd.com'];
+let isAdmin = false;
+
+function applyAdminVisibility() {
+  const panel = document.getElementById('settingsPanel');
+  if (isAdmin) {
+    panel.classList.remove('admin-hidden');
+  } else {
+    panel.classList.add('admin-hidden');
+  }
+}
+
 // ─── Init ────────────────────────────────────────────────────────
 let fbApp, fbAuth, fbDb;
 let currentUser  = null;
@@ -1432,6 +1446,11 @@ async function onSignIn(user) {
   document.getElementById('userAvatar').src = user.photoURL || '';
   document.getElementById('userName').textContent    = user.displayName || user.email;
 
+  // Admin check
+  isAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+  applyAdminVisibility();
+  if (isAdmin) console.log('✅ Admin access granted for', user.email);
+
   // Capture guest progress before loading saved data
   const guestN    = state.n;
   const guestAbsN = Math.abs(guestN);
@@ -1481,12 +1500,18 @@ async function onSignIn(user) {
 function onSignOut() {
   currentUser  = null;
   userBestAbsN = 0;
+  isAdmin = false;
+  applyAdminVisibility();
   document.getElementById('signedOut').style.display = 'block';
   document.getElementById('signedIn').style.display  = 'none';
   // Reset to default starting position for new/signed-out users
   state.n = 1; state.subStep = 0; state.stepDir = 1;
   state.rotation = 0; state.highestAbsN = 1;
   state.panX = 0; state.panY = 0;
+  // Reset mode to fib-steps (default for non-admin users)
+  state.mode = 'fib-steps';
+  document.querySelectorAll('.mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === 'fib-steps'));
   centerNlOn(1);
   drawSpiral(); drawNumberLine(); updateModeInfo();
 }
@@ -1494,15 +1519,12 @@ function onSignOut() {
 // ─── Display helpers ─────────────────────────────────────────────
 function updateUserBestDisplay(n) {
   const scoreEl = document.getElementById('userBestScore');
-  const fibEl   = document.getElementById('userBestFib');
   if (n === null || n === undefined) {
     scoreEl.textContent = 'Best: —';
-    fibEl.textContent   = '';
   } else {
     const fibVal = fmt(fib(n));
     const truncated = fibVal.length > 20 ? fibVal.slice(0,18) + '…' : fibVal;
     scoreEl.textContent = 'Best: ' + truncated;
-    fibEl.textContent   = 'F(' + n + ')';
   }
 }
 
