@@ -187,17 +187,66 @@ html, body {
 
 /* mobile */
 @media (max-width: 640px) {
-  .shell { padding: 8px; gap: 8px; }
-  .main-row { flex-direction: column; }
-  .sidebar {
-    width: 100%; flex-direction: row;
-    flex-wrap: nowrap; overflow-x: auto; overflow-y: visible;
-    gap: 8px; padding-bottom: 4px;
-  }
-  .sidebar .card { min-width: 160px; flex-shrink: 0; }
+  .shell { padding: 6px; gap: 6px; }
+  .main-row { flex-direction: column; gap: 6px; }
+  .sidebar { display: none; }
+  .sidebar-right { display: none; }
   .top-bar h1 { font-size: 18px; }
-  .nl-wrapper { height: 72px; }
-  .right-col { order: -1; }
+  .nl-wrapper { height: 64px; }
+  .right-col { order: 0; }
+
+  /* Mobile top bar: show account button inline */
+  .top-bar-right { gap: 6px; }
+  .mobile-account-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 10px;
+    color: var(--txt); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600;
+  }
+  .mobile-account-btn:hover { border-color: var(--amber); }
+  .mobile-account-btn img {
+    width: 22px; height: 22px; border-radius: 50%;
+    object-fit: cover;
+  }
+
+  /* Mobile bottom sheet for account/leaderboard */
+  .mobile-sheet-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 90;
+    backdrop-filter: blur(2px);
+  }
+  .mobile-sheet-backdrop.open { display: flex; align-items: flex-end; justify-content: center; }
+  .mobile-sheet {
+    background: #111827;
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    padding: 20px 16px 24px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 -12px 40px rgba(0,0,0,0.5);
+  }
+  .mobile-sheet .card { margin-bottom: 12px; }
+  .mobile-sheet .card:last-child { margin-bottom: 0; }
+  .mobile-sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--txt3); border-radius: 2px;
+    margin: 0 auto 14px;
+  }
+}
+/* Hide mobile-only elements on desktop */
+@media (min-width: 641px) {
+  .mobile-account-btn { display: none !important; }
+  .mobile-sheet-backdrop { display: none !important; }
+}
+/* tablet: hide left sidebar, keep right sidebar */
+@media (min-width: 641px) and (max-width: 900px) {
+  .sidebar { display: none; }
 }
 
 /* scroll hint */
@@ -342,7 +391,7 @@ html, body {
   text-align: center; margin-top: 6px;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 641px) and (max-width: 900px) {
   .sidebar-right { display: none; }
 }
 
@@ -419,6 +468,9 @@ html, body {
   <div class="top-bar">
     <h1>Fibonacci Zoom</h1>
     <div class="top-bar-right">
+      <button class="mobile-account-btn" id="mobileAccountBtn" title="Account & Leaderboard">
+        <span id="mobileAccountLabel">Sign in</span>
+      </button>
       <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
     </div>
   </div>
@@ -554,6 +606,43 @@ html, body {
 
   </div><!-- /main-row -->
 </div><!-- /shell -->
+
+<!-- Mobile bottom sheet (account + leaderboard) -->
+<div class="mobile-sheet-backdrop" id="mobileSheet">
+  <div class="mobile-sheet">
+    <div class="mobile-sheet-handle"></div>
+    <div class="card" id="mobileAuthCard">
+      <div class="card-title">Account</div>
+      <div id="mobileSignedOut">
+        <button class="auth-btn" id="mobileSignInBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Sign in with Google
+        </button>
+        <div class="lb-status">Sign in to save progress<br>& join the leaderboard</div>
+      </div>
+      <div id="mobileSignedIn" style="display:none">
+        <div class="user-row">
+          <img class="user-avatar" id="mobileUserAvatar" src="" alt="">
+          <div style="flex:1;min-width:0;">
+            <div class="user-name" id="mobileUserName"></div>
+            <div class="user-score" id="mobileUserBestScore">Best: —</div>
+          </div>
+        </div>
+        <button class="signout-btn" id="mobileSignOutBtn">sign out</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏆 Leaderboard</div>
+      <div id="mobileLbList"><div class="lb-empty">Loading…</div></div>
+      <div class="lb-status" id="mobileLbStatus"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -1282,6 +1371,46 @@ document.getElementById('settingsOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('settingsOverlay')) closeOverlay('settingsOverlay');
 });
 
+// ─── Mobile bottom sheet ──────────────────────────────────────────
+document.getElementById('mobileAccountBtn').addEventListener('click', () => {
+  document.getElementById('mobileSheet').classList.add('open');
+});
+document.getElementById('mobileSheet').addEventListener('click', e => {
+  if (e.target === document.getElementById('mobileSheet')) {
+    document.getElementById('mobileSheet').classList.remove('open');
+  }
+});
+
+// Sync mobile account button label with auth state
+function updateMobileAccountBtn() {
+  const btn = document.getElementById('mobileAccountBtn');
+  if (currentUser) {
+    btn.innerHTML = currentUser.photoURL
+      ? `<img src="${currentUser.photoURL}" referrerpolicy="no-referrer" alt=""><span>${(currentUser.displayName || 'Account').split(' ')[0]}</span>`
+      : `<span>${(currentUser.displayName || 'Account').split(' ')[0]}</span>`;
+  } else {
+    btn.innerHTML = '<span>Sign in</span>';
+  }
+}
+// Sync mobile signed-in/out panels
+function syncMobileAuth() {
+  if (currentUser) {
+    document.getElementById('mobileSignedOut').style.display  = 'none';
+    document.getElementById('mobileSignedIn').style.display   = 'block';
+    document.getElementById('mobileUserAvatar').src = currentUser.photoURL || '';
+    document.getElementById('mobileUserName').textContent = currentUser.displayName || currentUser.email;
+  } else {
+    document.getElementById('mobileSignedOut').style.display  = 'block';
+    document.getElementById('mobileSignedIn').style.display   = 'none';
+  }
+  updateMobileAccountBtn();
+}
+// Sync mobile leaderboard (called from renderLeaderboard)
+function syncMobileLeaderboard(html, statusText) {
+  document.getElementById('mobileLbList').innerHTML  = html;
+  document.getElementById('mobileLbStatus').textContent = statusText;
+}
+
 // ─── Toggles (all panels) ────────────────────────────────────────
 document.querySelectorAll('.toggle-item').forEach(item => {
   item.addEventListener('click', () => {
@@ -1408,6 +1537,17 @@ function initFirebase() {
     fbAuth = firebase.auth();
     fbDb   = firebase.firestore();
 
+    // Handle redirect result when returning from Google auth on mobile
+    fbAuth.getRedirectResult().then(result => {
+      if (result && result.user) {
+        console.log('✅ Redirect sign-in complete:', result.user.displayName);
+      }
+    }).catch(err => {
+      if (err.code !== 'auth/no-auth-event') {
+        console.error('❌ Redirect result error:', err.message);
+      }
+    });
+
     // Auth state listener
     fbAuth.onAuthStateChanged(async user => {
       currentUser = user;
@@ -1418,18 +1558,29 @@ function initFirebase() {
       }
     });
 
-    // Sign-in button
-    document.getElementById('signInBtn').addEventListener('click', () => {
+    // Sign-in helper (popup on desktop, redirect on mobile)
+    function doSignIn() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      fbAuth.signInWithPopup(provider).catch(err => {
-        console.error('❌ Sign-in error:', err.message);
-      });
-    });
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        fbAuth.signInWithRedirect(provider).catch(err => {
+          console.error('❌ Sign-in redirect error:', err.message);
+        });
+      } else {
+        fbAuth.signInWithPopup(provider).catch(err => {
+          console.error('❌ Sign-in popup error:', err.message);
+        });
+      }
+    }
 
-    // Sign-out button
-    document.getElementById('signOutBtn').addEventListener('click', () => {
-      fbAuth.signOut();
-    });
+    // Sign-in buttons (desktop + mobile)
+    document.getElementById('signInBtn').addEventListener('click', doSignIn);
+    document.getElementById('mobileSignInBtn').addEventListener('click', doSignIn);
+
+    // Sign-out buttons (desktop + mobile)
+    function doSignOut() { fbAuth.signOut(); }
+    document.getElementById('signOutBtn').addEventListener('click', doSignOut);
+    document.getElementById('mobileSignOutBtn').addEventListener('click', doSignOut);
 
     // Start leaderboard listener immediately (public read)
     startLeaderboardListener();
@@ -1492,6 +1643,7 @@ async function onSignIn(user) {
     drawSpiral();
     drawNumberLine();
     updateModeInfo();
+    syncMobileAuth();
   } catch (err) {
     console.error('❌ Error loading score:', err.message);
   }
@@ -1514,18 +1666,17 @@ function onSignOut() {
     b.classList.toggle('active', b.dataset.mode === 'fib-steps'));
   centerNlOn(1);
   drawSpiral(); drawNumberLine(); updateModeInfo();
+  syncMobileAuth();
 }
 
 // ─── Display helpers ─────────────────────────────────────────────
 function updateUserBestDisplay(n) {
-  const scoreEl = document.getElementById('userBestScore');
-  if (n === null || n === undefined) {
-    scoreEl.textContent = 'Best: —';
-  } else {
-    const fibVal = fmt(fib(n));
-    const truncated = fibVal.length > 20 ? fibVal.slice(0,18) + '…' : fibVal;
-    scoreEl.textContent = 'Best: ' + truncated;
-  }
+  const text = (n === null || n === undefined)
+    ? 'Best: —'
+    : 'Best: ' + (fmt(fib(n)).length > 20 ? fmt(fib(n)).slice(0,18) + '…' : fmt(fib(n)));
+  document.getElementById('userBestScore').textContent = text;
+  const mobileEl = document.getElementById('mobileUserBestScore');
+  if (mobileEl) mobileEl.textContent = text;
 }
 
 function fibDisplayStr(n) {
@@ -1577,7 +1728,9 @@ function startLeaderboardListener() {
 function renderLeaderboard(rows) {
   const list = document.getElementById('lbList');
   if (!rows.length) {
-    list.innerHTML = '<div class="lb-empty">No scores yet — be first!</div>';
+    const emptyHtml = '<div class="lb-empty">No scores yet — be first!</div>';
+    list.innerHTML = emptyHtml;
+    syncMobileLeaderboard(emptyHtml, '');
     return;
   }
 
@@ -1600,8 +1753,9 @@ function renderLeaderboard(rows) {
     </div>`;
   }).join('');
 
-  document.getElementById('lbStatus').textContent =
-    `${rows.length} player${rows.length !== 1 ? 's' : ''}`;
+  const statusText = `${rows.length} player${rows.length !== 1 ? 's' : ''}`;
+  document.getElementById('lbStatus').textContent = statusText;
+  syncMobileLeaderboard(list.innerHTML, statusText);
 }
 
 function escHtml(s) {
