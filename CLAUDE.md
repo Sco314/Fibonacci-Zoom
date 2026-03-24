@@ -155,8 +155,9 @@ state = {
 | `updateModeInfo()` | Updates modeInfo text in settings overlay |
 | `updateFooter()` | Updates zoomLbl span in canvas footer |
 | `maybeSaveScore(n)` | Firebase write — only if |n| > userBestAbsN, no-op if not signed in |
-| `updateUserBestDisplay(n)` | Updates Account card to show F(n) value with the best score |
+| `updateUserBestDisplay(n)` | Updates Account card "Best:" label with truncated F(n) value |
 | `fibDisplayStr(n)` | Returns truncated comma-formatted F(n) string for leaderboard/UI |
+| `applyAdminVisibility()` | Toggles `admin-hidden` class on settings panel based on `isAdmin` flag |
 
 ---
 
@@ -206,16 +207,31 @@ scores/{uid}  →  { n, absN, fibDisplay, displayName, photoURL, uid, updatedAt 
 
 ## Settings panel — access levels
 
-One settings overlay (`#settingsOverlay`), opened by ⚙️ button. Controls are visually separated by section headers. Admin sections have a red **ADMIN** badge on the section header.
+One settings overlay (`#settingsOverlay`), opened by ⚙️ button. Controls are visually separated by section headers. Admin sections have a red **ADMIN** badge on the section header and are **only visible to admin users**.
 
-| Section | Badge | Controls |
+### Admin authentication
+
+Admin controls are gated by a hardcoded email whitelist (UI-level only — not server-enforced):
+
+```js
+const ADMIN_EMAILS = ['scottsandvik@gmail.com', 'ssandvik@hisd.com'];
+```
+
+On sign-in, `isAdmin` is set by checking `currentUser.email` against this list. The `.overlay-panel` element gets class `admin-hidden` toggled via `applyAdminVisibility()`. CSS rule `.admin-hidden [data-admin="true"] { display: none !important; }` hides admin sections.
+
+On sign-out, `isAdmin` is reset to `false` and admin sections are hidden.
+
+### Settings sections
+
+| Section | Access | Controls |
 |---|---|---|
-| Display | none | Negative n coloring |
-| Visualization | ADMIN | Show Squares, Show Numbers, Fibonacci Spiral |
-| Mode | ADMIN | Standard / Fib Steps buttons |
-| Number Line | — | Free drag toggle (has its own ADMIN badge) |
+| Display | All users | Negative n coloring |
+| Visualization | Admin only (`data-admin="true"`) | Show Squares, Show Numbers, Fibonacci Spiral |
+| Mode | Admin only (`data-admin="true"`) | Standard / Fib Steps buttons |
+| Number Line | Admin only (`data-admin="true"`) | Free drag toggle |
 
-There is no password protection on admin controls — they are teacher/instructor controls intended to be accessible but clearly labeled. If password protection is needed, that is a future feature.
+### Security note
+This is UI-level only — the admin whitelist is visible in the HTML source. Acceptable for this use case (teacher tool). Firestore security rules already prevent score manipulation. No server-side admin enforcement is needed.
 
 ---
 
@@ -230,8 +246,6 @@ There is no password protection on admin controls — they are teacher/instructo
 - **Negative n tiling** — For negative n, `buildSquares` uses `fibPos(k)` (absolute sizes) and labels squares with `fib(-k)`, giving correct values with sign. The visual geometry is identical to positive n (same square sizes) with only color difference. This is a known simplification — a true "negative" tiling would spiral the other direction geometrically.
 
 - **LOOKAHEAD constant** — set to 13. Increasing this fills more canvas with ghost squares but adds draw cost. At large n (>50) the lookahead squares are tiny and barely visible anyway.
-
-- **Admin controls are not truly access-controlled** — anyone can open settings and change mode or unlock free scroll. If a real access control system is needed, it should be tied to Firebase Auth (e.g., a separate `admins` Firestore collection checked on sign-in).
 
 ---
 

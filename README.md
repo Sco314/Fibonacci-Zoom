@@ -102,18 +102,18 @@ scores/{uid} = {
 
 ## Settings and admin controls
 
-Access via the ⚙️ button (top right).
+Access via the ⚙️ button (top right). Admin sections are only visible when signed in with an authorized admin email.
 
 | Control | Level | Default |
 |---|---|---|
-| Negative n coloring | Settings | On |
-| Show Squares | Admin | On |
-| Show Numbers | Admin | On |
-| Fibonacci Spiral | Admin | On |
-| Mode (Standard / Fib Steps) | Admin | Fib Steps |
-| Free drag to any n (number line) | Admin | Off |
+| Negative n coloring | All users | On |
+| Show Squares | Admin only | On |
+| Show Numbers | Admin only | On |
+| Fibonacci Spiral | Admin only | On |
+| Mode (Standard / Fib Steps) | Admin only | Fib Steps |
+| Free drag to any n (number line) | Admin only | Off |
 
-Admin controls are labeled with a red **ADMIN** badge. They are visible to all users in settings — "admin" here means instructor/teacher controls, not a password-protected role. If you want to password-protect them, that is a future enhancement.
+Admin controls are gated by a hardcoded email whitelist checked at sign-in. Non-admin users only see the Display settings. This is UI-level gating (the whitelist is in the HTML source), not server-enforced — suitable for the current teacher/instructor use case.
 
 ---
 
