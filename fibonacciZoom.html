@@ -187,10 +187,11 @@ html, body {
 
 /* mobile */
 @media (max-width: 640px) {
-  .shell { padding: 6px; gap: 6px; height: 100dvh; height: -webkit-fill-available; }
+  /* 100svh = stable viewport height — doesn't change when address bar shows/hides */
+  .shell { padding: 6px; gap: 6px; height: 100svh; overflow: hidden; }
   .main-row { flex-direction: column; gap: 6px; }
-  .sidebar { display: none; }
-  .sidebar-right { display: none; }
+  .sidebar { display: none !important; }
+  .sidebar-right { display: none !important; }
   .top-bar h1 { font-size: 18px; }
   .nl-wrapper { height: 64px; }
   .right-col { order: 0; gap: 4px; }
@@ -1471,16 +1472,6 @@ const ro = new ResizeObserver(() => {
 });
 ro.observe(document.querySelector('.canvas-box'));
 ro.observe(document.querySelector('.nl-wrapper'));
-
-// Safari iOS: catch address bar show/hide (ResizeObserver may miss it)
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => {
-    if (window.innerWidth <= 640) {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => { resizeCanvases(); drawSpiral(); drawNumberLine(); }, 80);
-    }
-  });
-}
 
 // ─── Boot ────────────────────────────────────────────────────────
 resizeCanvases();
