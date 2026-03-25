@@ -19,15 +19,16 @@ Single-file web app (`fibonacciZoom.html`). No bundler, no npm, no build step. E
 ### Single file layout order
 1. `<head>` — Google Fonts (Cormorant Garamond + JetBrains Mono), `<style>` block
 2. `<body>` — `.shell` layout div
-3. Top bar (centered title + ⚙️ settings button)
+3. Top bar (centered title + ⚙️ settings button + mobile account button)
 4. Settings overlay (unified — both user settings and admin controls in one panel with ADMIN badges)
 5. `.main-row` flex container:
-   - `.sidebar` (left, 240px) — sign-in hint card only
+   - `.sidebar` (left, 240px) — scroll hint card (hidden on mobile/tablet)
    - `.right-col` (flex:1) — number line canvas + spiral canvas stacked
-   - `.sidebar-right` (right, 200px) — Account card + Leaderboard card
-6. First `<script>` block — all game logic
-7. Firebase CDN `<script>` tags (compat v10)
-8. Second `<script>` block — Firebase init, auth, leaderboard
+   - `.sidebar-right` (right, 200px) — Account card + Leaderboard card (hidden <900px)
+6. Mobile bottom sheet (`#mobileSheet`) — duplicated Account + Leaderboard for <640px
+7. First `<script>` block — all game logic + mobile sheet wiring
+8. Firebase CDN `<script>` tags (compat v10)
+9. Second `<script>` block — Firebase init, auth, leaderboard, mobile sync
 
 ### Layout CSS variables
 ```css

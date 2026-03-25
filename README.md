@@ -18,6 +18,7 @@ Built for mathematics education — designed for high school and college student
   - **Fib Steps** — advancing to index n requires exactly F(|n|) clicks, making the effort proportional to the number itself
 - **Live leaderboard** — Google sign-in via Firebase, scores saved per user, top 10 displayed in real time with actual Fibonacci values
 - **Progress restored** — sign in and the app jumps back to your last reached index; new users start at F(1) = 1
+- **Mobile friendly** — responsive layout with bottom sheet for account/leaderboard, compact number line, and `signInWithRedirect` for mobile Safari/Chrome
 
 ---
 
