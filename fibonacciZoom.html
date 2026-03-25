@@ -460,9 +460,22 @@ html, body {
 .legend { display: flex; gap: 14px; }
 .leg-item { display: flex; align-items: center; gap: 5px; }
 .leg-line { width: 14px; height: 2px; border-radius: 1px; }
+
+/* Debug overlay — TEMPORARY, remove after diagnosis */
+#debugOverlay {
+  display: none;
+  position: fixed; bottom: 60px; left: 4px; right: 4px;
+  background: rgba(0,0,0,0.85); color: #0f0;
+  font: 10px/1.4 'JetBrains Mono', monospace;
+  padding: 6px 8px; border-radius: 6px;
+  z-index: 9999; max-height: 30vh; overflow-y: auto;
+  pointer-events: none;
+}
+@media (max-width: 640px) { #debugOverlay { display: block; } }
 </style>
 </head>
 <body>
+<div id="debugOverlay">debug loading...</div>
 <div class="shell">
 
   <!-- Top bar -->
@@ -765,6 +778,19 @@ const sctx  = sc.getContext('2d');
 const nl    = document.getElementById('nlCanvas');
 const nlctx = nl.getContext('2d');
 
+// ─── Debug logger (TEMPORARY) ────────────────────────────────────
+const _dbgLog = [];
+let _dbgDrawCount = 0;
+let _dbgResizeCount = 0;
+let _dbgSkipCount = 0;
+function dbg(msg) {
+  const t = (performance.now() / 1000).toFixed(2);
+  _dbgLog.push(`[${t}s] ${msg}`);
+  if (_dbgLog.length > 30) _dbgLog.shift();
+  const el = document.getElementById('debugOverlay');
+  if (el) el.textContent = _dbgLog.join('\n');
+}
+
 function resizeCanvases() {
   const sr = sc.parentElement.getBoundingClientRect();
   const sw = Math.round(sr.width), sh = Math.round(sr.height);
@@ -772,8 +798,12 @@ function resizeCanvases() {
   const nw = Math.round(nr.width), nh = Math.round(nr.height);
 
   // Skip if dimensions haven't changed — prevents ResizeObserver feedback loop
-  // (sub-pixel diffs from getBoundingClientRect vs explicit style cause re-layout)
-  if (sw === state._sw && sh === state._sh && nw === state._nlw && nh === state._nlh) return;
+  if (sw === state._sw && sh === state._sh && nw === state._nlw && nh === state._nlh) {
+    _dbgSkipCount++;
+    return;
+  }
+  _dbgResizeCount++;
+  dbg(`RESIZE #${_dbgResizeCount} canvas:${sw}x${sh} (was ${state._sw}x${state._sh}) skipped:${_dbgSkipCount}`);
 
   sc.width  = sw * devicePixelRatio;
   sc.height = sh * devicePixelRatio;
@@ -914,10 +944,12 @@ function drawNumberLine() {
 // ─── Spiral draw ─────────────────────────────────────────────────
 const LOOKAHEAD = 13; // extra squares always visible as ghost context
 
-function drawSpiral() {
+function drawSpiral(caller) {
+  _dbgDrawCount++;
   const ctx = sctx;
   const W = state._sw, H = state._sh;
   const n = state.n;
+  dbg(`DRAW #${_dbgDrawCount} from:${caller||'?'} W=${W} H=${H} n=${n} rot=${state.rotation.toFixed(3)} pan=${state.panX.toFixed(1)},${state.panY.toFixed(1)}`);
 
   ctx.fillStyle = '#0a0e1a';
   ctx.fillRect(0, 0, W, H);
@@ -1138,7 +1170,7 @@ function tickInput(dir) {
     commitN(targetN);
   } else {
     // Still building up — draw ghost state
-    drawSpiral();
+    drawSpiral('commitN');
     drawNumberLine();
   }
 
@@ -1153,7 +1185,7 @@ function commitN(newN) {
   // Track legitimate high-water mark for NL drag boundary
   if (Math.abs(newN) > state.highestAbsN) state.highestAbsN = Math.abs(newN);
   animateNlToN(newN);
-  drawSpiral();
+  drawSpiral('commitN');
   drawNumberLine();
   updateModeInfo();
   maybeSaveScore(newN);
@@ -1205,7 +1237,7 @@ window.addEventListener('mousemove', e => {
     if (state.dragMoved) {
       state.panX += dx; state.panY += dy;
       state.lastMx = e.clientX; state.lastMy = e.clientY;
-      drawSpiral();
+      drawSpiral('mousemove');
     }
   }
   // Number-line pan
@@ -1224,7 +1256,7 @@ window.addEventListener('mousemove', e => {
         state.nlWorldX = clampedWorld;
       }
     }
-    if (centN !== state.n) { state.n = centN; state.subStep = 0; drawSpiral(); updateModeInfo(); }
+    if (centN !== state.n) { state.n = centN; state.subStep = 0; drawSpiral('nlMouseDrag'); updateModeInfo(); }
     drawNumberLine();
   }
 });
@@ -1266,7 +1298,7 @@ sc.addEventListener('touchmove', e => {
       state.panX += dx; state.panY += dy;
       state.lastMx = e.touches[0].clientX;
       state.lastMy = e.touches[0].clientY;
-      drawSpiral();
+      drawSpiral('touchmove');
     }
   }
 }, { passive: false });
@@ -1310,7 +1342,7 @@ function nlMomentum() {
           state.nlVel = 0;
         }
       }
-      if (centN !== state.n) { state.n = centN; state.subStep = 0; drawSpiral(); updateModeInfo(); }
+      if (centN !== state.n) { state.n = centN; state.subStep = 0; drawSpiral('nlMomentum'); updateModeInfo(); }
       drawNumberLine();
       state.nlAF = requestAnimationFrame(tick);
     } else {
@@ -1362,7 +1394,7 @@ nl.addEventListener('touchmove', e => {
     if (centN === -state.highestAbsN || centN === state.highestAbsN)
       state.nlWorldX = state._nlw/2 - centN*NL_CELL - NL_CELL/2;
   }
-  if (centN !== state.n) { state.n = centN; state.subStep = 0; drawSpiral(); updateModeInfo(); }
+  if (centN !== state.n) { state.n = centN; state.subStep = 0; drawSpiral('nlDrag'); updateModeInfo(); }
   drawNumberLine();
 }, { passive: false });
 nl.addEventListener('touchend', e => {
@@ -1432,7 +1464,7 @@ document.querySelectorAll('.toggle-item').forEach(item => {
       const lg = document.getElementById('goldenLegItem');
       if (lg) lg.style.display = state[key] ? 'flex' : 'none';
     }
-    drawSpiral();
+    drawSpiral('toggle');
     drawNumberLine();
   });
 });
@@ -1445,7 +1477,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     scrollAccum   = 0;
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
     updateModeInfo();
-    drawSpiral();
+    drawSpiral('toggle');
     drawNumberLine();
   });
 });
@@ -1458,7 +1490,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   scrollAccum = 0;
   closeOverlay('settingsOverlay');
   centerNlOn(1);
-  drawSpiral(); drawNumberLine(); updateModeInfo();
+  drawSpiral('reset'); drawNumberLine(); updateModeInfo();
 });
 
 // ─── Keyboard ────────────────────────────────────────────────────
@@ -1472,9 +1504,9 @@ let resizeTimer = 0;
 const ro = new ResizeObserver(() => {
   if (window.innerWidth <= 640) {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { resizeCanvases(); drawSpiral(); drawNumberLine(); }, 80);
+    resizeTimer = setTimeout(() => { resizeCanvases(); drawSpiral('resize-mobile'); drawNumberLine(); }, 80);
   } else {
-    resizeCanvases(); drawSpiral(); drawNumberLine();
+    resizeCanvases(); drawSpiral('resize-desktop'); drawNumberLine();
   }
 });
 ro.observe(document.querySelector('.canvas-box'));
@@ -1482,7 +1514,7 @@ ro.observe(document.querySelector('.nl-wrapper'));
 
 // ─── Boot ────────────────────────────────────────────────────────
 resizeCanvases();
-drawSpiral();
+drawSpiral('boot');
 drawNumberLine();
 updateModeInfo();
 </script>
@@ -1657,7 +1689,7 @@ async function onSignIn(user) {
         updateUserBestDisplay(null);
       }
     }
-    drawSpiral();
+    drawSpiral('onSignIn');
     drawNumberLine();
     updateModeInfo();
     syncMobileAuth();
@@ -1682,7 +1714,7 @@ function onSignOut() {
   document.querySelectorAll('.mode-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.mode === 'fib-steps'));
   centerNlOn(1);
-  drawSpiral(); drawNumberLine(); updateModeInfo();
+  drawSpiral('toggle'); drawNumberLine(); updateModeInfo();
   syncMobileAuth();
 }
 
