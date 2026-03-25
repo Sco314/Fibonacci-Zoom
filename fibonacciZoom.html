@@ -767,20 +767,27 @@ const nlctx = nl.getContext('2d');
 
 function resizeCanvases() {
   const sr = sc.parentElement.getBoundingClientRect();
-  sc.width  = sr.width  * devicePixelRatio;
-  sc.height = sr.height * devicePixelRatio;
-  sc.style.width  = sr.width  + 'px';
-  sc.style.height = sr.height + 'px';
-  sctx.scale(devicePixelRatio, devicePixelRatio);
-  state._sw = sr.width; state._sh = sr.height;
-
+  const sw = Math.round(sr.width), sh = Math.round(sr.height);
   const nr = nl.parentElement.getBoundingClientRect();
-  nl.width  = nr.width  * devicePixelRatio;
-  nl.height = nr.height * devicePixelRatio;
-  nl.style.width  = nr.width  + 'px';
-  nl.style.height = nr.height + 'px';
+  const nw = Math.round(nr.width), nh = Math.round(nr.height);
+
+  // Skip if dimensions haven't changed — prevents ResizeObserver feedback loop
+  // (sub-pixel diffs from getBoundingClientRect vs explicit style cause re-layout)
+  if (sw === state._sw && sh === state._sh && nw === state._nlw && nh === state._nlh) return;
+
+  sc.width  = sw * devicePixelRatio;
+  sc.height = sh * devicePixelRatio;
+  sc.style.width  = sw + 'px';
+  sc.style.height = sh + 'px';
+  sctx.scale(devicePixelRatio, devicePixelRatio);
+  state._sw = sw; state._sh = sh;
+
+  nl.width  = nw * devicePixelRatio;
+  nl.height = nh * devicePixelRatio;
+  nl.style.width  = nw + 'px';
+  nl.style.height = nh + 'px';
   nlctx.scale(devicePixelRatio, devicePixelRatio);
-  state._nlw = nr.width; state._nlh = nr.height;
+  state._nlw = nw; state._nlh = nh;
 
   centerNlOn(state.n);
 }
