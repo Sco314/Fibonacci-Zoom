@@ -341,10 +341,10 @@ html, body {
 .signout-btn {
   background: none; border: none; cursor: pointer;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; color: var(--txt3);
-  padding: 4px 0 0; text-decoration: underline;
+  font-size: 12px; color: var(--txt2);
+  padding: 4px 0 0;
 }
-.signout-btn:hover { color: var(--txt2); }
+.signout-btn:hover { color: var(--amber); }
 
 /* leaderboard */
 .lb-row {
@@ -966,8 +966,23 @@ function drawSpiral() {
   const lookaheadSqs = allSquares.slice(absN); // only the extra ones
 
   const sq0  = squares[0];
-  const eyeX = sq0.x + sq0.size;
-  const eyeY = sq0.y + sq0.size;
+  let eyeX, eyeY;
+  if (W < 500 && squares.length > 0) {
+    // Mobile: center on bounding box midpoint for better visual balance at low n
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    squares.forEach(sq => {
+      minX = Math.min(minX, sq.x);
+      minY = Math.min(minY, sq.y);
+      maxX = Math.max(maxX, sq.x + sq.size);
+      maxY = Math.max(maxY, sq.y + sq.size);
+    });
+    eyeX = (minX + maxX) / 2;
+    eyeY = (minY + maxY) / 2;
+  } else {
+    // Desktop: classic eye point (spiral convergence point)
+    eyeX = sq0.x + sq0.size;
+    eyeY = sq0.y + sq0.size;
+  }
 
   // Rotation: state.rotation is the committed total (grows by π/2 each step).
   // In fib-steps mode, progress smoothly rotates toward the next π/2 increment.
@@ -1139,6 +1154,7 @@ function tickInput(dir) {
     // Still building up — draw ghost state
     drawSpiral();
     drawNumberLine();
+    debouncedSaveProgress();
   }
 
   // Update mode-info card to show progress toward next n
@@ -1156,6 +1172,7 @@ function commitN(newN) {
   drawNumberLine();
   updateModeInfo();
   maybeSaveScore(newN);
+  debouncedSaveProgress();
 }
 
 function updateModeInfo() {
@@ -1636,15 +1653,19 @@ async function onSignIn(user) {
         updateUserBestDisplay(guestN);
         console.log(`✅ Keeping guest progress n=${guestN} (beats saved n=${data.n}) for ${user.displayName}`);
         maybeSaveScore(guestN);
-      } else if (data.n !== undefined && data.n !== null) {
-        // Saved is further — restore it
-        state.n          = data.n;
-        state.highestAbsN = Math.max(state.highestAbsN, Math.abs(data.n));
-        state.rotation   = 0;
-        state.subStep    = 0;
-        centerNlOn(state.n);
-        updateUserBestDisplay(data.n);
-        console.log(`✅ Restored n=${data.n} for ${user.displayName}`);
+      } else {
+        // Saved is further — restore it (including sub-step progress)
+        const restoreN = data.currentN ?? data.n;
+        if (restoreN !== undefined && restoreN !== null) {
+          state.n          = restoreN;
+          state.subStep    = data.currentSubStep ?? 0;
+          state.stepDir    = data.currentStepDir ?? 1;
+          state.highestAbsN = Math.max(state.highestAbsN, Math.abs(restoreN));
+          state.rotation   = 0;
+          centerNlOn(state.n);
+          updateUserBestDisplay(data.n ?? restoreN);
+          console.log(`✅ Restored n=${restoreN} subStep=${state.subStep} for ${user.displayName}`);
+        }
       }
     } else {
       // New user — save guest progress if they've moved beyond n=1
@@ -1713,6 +1734,9 @@ async function maybeSaveScore(n) {
       n,
       absN,
       fibDisplay: fibDisplayStr(n),
+      currentN:       state.n,
+      currentSubStep: state.subStep,
+      currentStepDir: state.stepDir,
       displayName: currentUser.displayName || currentUser.email,
       photoURL:    currentUser.photoURL    || '',
       uid:         currentUser.uid,
@@ -1721,6 +1745,31 @@ async function maybeSaveScore(n) {
     console.log(`✅ Score saved: n=${n}, F(n)=${fmt(fib(n))}`);
   } catch (err) {
     console.error('❌ Error saving score:', err.message);
+  }
+}
+
+// ─── Save progress (debounced) ───────────────────────────────────
+// Persists current position + sub-step so user doesn't lose click progress
+let saveProgressTimer = 0;
+function debouncedSaveProgress() {
+  if (!currentUser || !fbDb) return;
+  clearTimeout(saveProgressTimer);
+  saveProgressTimer = setTimeout(saveProgress, 2000);
+}
+async function saveProgress() {
+  if (!currentUser || !fbDb) return;
+  try {
+    await fbDb.collection('scores').doc(currentUser.uid).set({
+      currentN:       state.n,
+      currentSubStep: state.subStep,
+      currentStepDir: state.stepDir,
+      displayName: currentUser.displayName || currentUser.email,
+      photoURL:    currentUser.photoURL    || '',
+      uid:         currentUser.uid,
+      updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.error('❌ Error saving progress:', err.message);
   }
 }
 
