@@ -1769,8 +1769,22 @@ function initFirebase() {
     document.getElementById('signInBtn').addEventListener('click', doSignIn);
     document.getElementById('mobileSignInBtn').addEventListener('click', doSignIn);
 
-    // Sign-out buttons (desktop + mobile)
-    function doSignOut() { fbAuth.signOut(); }
+    // Sign-out: delete anonymous accounts entirely, sign out Google accounts
+    async function doSignOut() {
+      if (currentUser && currentUser.isAnonymous) {
+        // Delete the anonymous Firestore doc and auth account entirely
+        try {
+          await fbDb.collection('scores').doc(currentUser.uid).delete();
+          await currentUser.delete();
+          console.log('✅ Anonymous account deleted');
+        } catch (err) {
+          console.error('⚠️ Error deleting anonymous account:', err.message);
+          fbAuth.signOut(); // fallback
+        }
+      } else {
+        fbAuth.signOut();
+      }
+    }
     document.getElementById('signOutBtn').addEventListener('click', doSignOut);
     document.getElementById('mobileSignOutBtn').addEventListener('click', doSignOut);
 
