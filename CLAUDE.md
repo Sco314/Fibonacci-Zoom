@@ -155,6 +155,7 @@ state = {
 | `drawNumberLine()` | Clears and redraws number line; self-schedules via rAF for indicator decay |
 | `updateModeInfo()` | Updates modeInfo text in settings overlay |
 | `updateFooter()` | Updates zoomLbl span in canvas footer |
+| `playCelebration(targetN)` | Zoom-through animation from n=1 to targetN on new high score (3s, cubic ease) |
 | `maybeSaveScore(n)` | Firebase write — only if |n| > userBestAbsN, no-op if not signed in |
 | `updateUserBestDisplay(n)` | Updates Account card "Best:" label with truncated F(n) value |
 | `fibDisplayStr(n)` | Returns truncated comma-formatted F(n) string for leaderboard/UI |

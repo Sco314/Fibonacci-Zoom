@@ -1138,6 +1138,8 @@ function stepsForN(targetN) {
 // Single entry point for ALL directional inputs
 // Keeps scrollAccum consistent across input method switches
 function tickInput(dir) {
+  // Block input during celebration animation
+  if (celebrationAF) return;
   // Flash indicator on number line
   state.nlIndSign  = dir;
   state.nlIndAlpha = 1.0;
@@ -1174,17 +1176,68 @@ function tickInput(dir) {
 }
 
 function commitN(newN) {
+  const oldHighest = state.highestAbsN;
   state.rotation += (Math.PI / 2) * (newN > state.n ? 1 : -1);
   state.n       = newN;
   state.subStep = 0;
   // Track legitimate high-water mark for NL drag boundary
-  if (Math.abs(newN) > state.highestAbsN) state.highestAbsN = Math.abs(newN);
+  const isNewHigh = Math.abs(newN) > oldHighest;
+  if (isNewHigh) state.highestAbsN = Math.abs(newN);
   animateNlToN(newN);
   drawSpiral();
   drawNumberLine();
   updateModeInfo();
   maybeSaveScore(newN);
   debouncedSaveProgress();
+
+  // Celebration: zoom-through animation on new high score
+  if (isNewHigh && Math.abs(newN) >= 3) {
+    playCelebration(Math.abs(newN));
+  }
+}
+
+// ─── Celebration: zoom-through animation on new high ─────────────
+// Rapidly zooms from n=1 up to targetN with logarithmic acceleration.
+// Total duration is fixed (~3s) regardless of targetN.
+let celebrationAF = null;
+function playCelebration(targetN) {
+  if (celebrationAF) cancelAnimationFrame(celebrationAF);
+  const DURATION = 3000; // ms
+  const startTime = performance.now();
+  const savedN = state.n;
+  const savedRotation = state.rotation;
+
+  function celebFrame(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / DURATION, 1); // 0→1
+
+    // Ease: slow start, fast middle, decelerate at end (cubic ease-in-out)
+    const eased = t < 0.5
+      ? 4 * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    // Map eased progress to n value (1 → targetN)
+    const displayN = Math.max(1, Math.round(1 + (targetN - 1) * eased));
+
+    // Temporarily override state for drawing
+    state.n = displayN;
+    state.rotation = (displayN - 1) * (Math.PI / 2);
+    drawSpiral();
+    animateNlToN(displayN);
+
+    if (t < 1) {
+      celebrationAF = requestAnimationFrame(celebFrame);
+    } else {
+      // Restore actual state
+      celebrationAF = null;
+      state.n = savedN;
+      state.rotation = savedRotation;
+      drawSpiral();
+      drawNumberLine();
+      animateNlToN(savedN);
+    }
+  }
+  celebrationAF = requestAnimationFrame(celebFrame);
 }
 
 function updateModeInfo() {
