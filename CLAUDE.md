@@ -187,10 +187,11 @@ Firebase compat v10 loaded via CDN (not npm). Global `firebase` object available
 
 ### Collections
 ```
-scores/{uid}  →  { n, absN, fibDisplay, displayName, photoURL, uid, updatedAt }
+scores/{uid}  →  { n, absN, fibDisplay, currentN, currentSubStep, currentStepDir, displayName, photoURL, uid, updatedAt }
 ```
 `fibDisplay` is the truncated F(n) string for leaderboard display.
-`absN` is used for leaderboard ordering. `n` is the actual value (can be negative). Only one document per user — upserted on each new best.
+`absN` is used for leaderboard ordering. `n` is the best value (can be negative). Only one document per user — upserted on each new best.
+`currentN`, `currentSubStep`, `currentStepDir` track live progress (saved every 2s via debounced writes, merged into the same document). On sign-in, these are restored so users don't lose partial click progress.
 
 ### Auth flow
 1. `initFirebase()` called at boot
