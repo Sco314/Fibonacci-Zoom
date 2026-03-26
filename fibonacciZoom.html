@@ -591,9 +591,9 @@ html, body {
       <!-- Auth card -->
       <div class="card" id="authCard">
         <div class="card-title">Account</div>
-        <!-- Signed-out state (shown briefly before anonymous auto-sign-in) -->
+        <!-- Signed-out state (unauthenticated until n=8) -->
         <div id="signedOut">
-          <div class="lb-status">Connecting...</div>
+          <div class="lb-status">Reach Fibonacci 21 to join<br>the leaderboard</div>
         </div>
         <!-- Signed-in state (both anonymous and Google users) -->
         <div id="signedIn" style="display:none">
@@ -637,7 +637,7 @@ html, body {
     <div class="card" id="mobileAuthCard">
       <div class="card-title">Account</div>
       <div id="mobileSignedOut">
-        <div class="lb-status">Connecting...</div>
+        <div class="lb-status">Reach Fibonacci 21 to join<br>the leaderboard</div>
       </div>
       <div id="mobileSignedIn" style="display:none">
         <div class="user-row">
@@ -1216,6 +1216,14 @@ function commitN(newN) {
   drawSpiral();
   drawNumberLine();
   updateModeInfo();
+  // At n=8: create guest account if not yet authenticated
+  if (isNewHigh && Math.abs(newN) >= 8 && !currentUser && fbAuth) {
+    fbAuth.signInAnonymously().catch(err => {
+      console.error('❌ Anonymous sign-in error:', err.message);
+    });
+    // onAuthStateChanged → onSignIn() will capture guestN = current state.n
+  }
+
   maybeSaveScore(newN);
   debouncedSaveProgress();
 
@@ -1698,19 +1706,24 @@ function initFirebase() {
       }
     });
 
-    // Auth state listener — auto sign-in anonymously if no session
+    // Auth state listener
     fbAuth.onAuthStateChanged(async user => {
       currentUser = user;
       if (user) {
         await onSignIn(user);
       } else {
-        // No session — create anonymous account automatically
-        try {
-          await fbAuth.signInAnonymously();
-          console.log('✅ Anonymous sign-in');
-        } catch (err) {
-          console.error('❌ Anonymous sign-in error:', err.message);
-        }
+        // No session — reset state, show unauthenticated UI
+        // User plays freely without auth until reaching n=8
+        state.n = 1; state.subStep = 0; state.stepDir = 1;
+        state.rotation = 0; state.highestAbsN = 1;
+        state.panX = 0; state.panY = 0;
+        userBestAbsN = 0;
+        isAdmin = false; applyAdminVisibility();
+        document.getElementById('signedOut').style.display = 'block';
+        document.getElementById('signedIn').style.display  = 'none';
+        centerNlOn(1);
+        drawSpiral(); drawNumberLine(); updateModeInfo();
+        syncMobileAuth();
       }
     });
 
@@ -1880,25 +1893,7 @@ async function onSignIn(user) {
   }
 }
 
-function onSignOut() {
-  currentUser  = null;
-  userBestAbsN = 0;
-  isAdmin = false;
-  applyAdminVisibility();
-  // Reset to default starting position
-  state.n = 1; state.subStep = 0; state.stepDir = 1;
-  state.rotation = 0; state.highestAbsN = 1;
-  state.panX = 0; state.panY = 0;
-  state.mode = 'fib-steps';
-  document.querySelectorAll('.mode-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.mode === 'fib-steps'));
-  centerNlOn(1);
-  drawSpiral(); drawNumberLine(); updateModeInfo();
-  // Auto-create new anonymous session (onAuthStateChanged will call onSignIn)
-  if (fbAuth) fbAuth.signInAnonymously().catch(err => {
-    console.error('❌ Anonymous re-sign-in error:', err.message);
-  });
-}
+// onSignOut removed — auth state listener handles state reset when user = null
 
 // ─── Display helpers ─────────────────────────────────────────────
 function updateUserBestDisplay(n) {
@@ -1985,6 +1980,7 @@ function startLeaderboardListener() {
 }
 
 function renderLeaderboard(rows) {
+  rows = rows.filter(row => (row.absN || 0) >= 8);
   const list = document.getElementById('lbList');
   if (!rows.length) {
     const emptyHtml = '<div class="lb-empty">No scores yet — be first!</div>';
