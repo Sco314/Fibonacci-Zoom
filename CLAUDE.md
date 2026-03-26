@@ -197,8 +197,11 @@ scores/{uid}  →  { n, absN, fibDisplay, currentN, currentSubStep, currentStepD
 ### Auth flow
 1. `initFirebase()` called at boot
 2. `fbAuth.onAuthStateChanged` drives all UI state
-3. On sign-in: compare guest progress vs saved — keep whichever is further, save guest progress if it beats stored best
-4. On sign-out: clear currentUser, reset to n=1
+3. If no user session: auto `signInAnonymously()` — user gets a persistent UID, default name "Guest XXXX"
+4. Anonymous users can type a custom name, save progress, appear on leaderboard
+5. "Sign in with Google" links anonymous account via `linkWithPopup/Redirect` — preserves UID + data
+6. On sign-out (Google users only): reset to n=1, auto-create new anonymous session
+7. Anonymous users cannot sign out (no sign-out button shown)
 
 ### Score save trigger
 `commitN()` calls `maybeSaveScore(newN)`. Writes only if `Math.abs(newN) > userBestAbsN`. Rate of writes is naturally low.
