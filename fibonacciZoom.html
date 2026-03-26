@@ -696,6 +696,24 @@ const PHI = (1 + Math.sqrt(5)) / 2;
 const NL_CELL    = 120;  // px per number-line cell
 const SCROLL_THR = 40;   // px scroll per tick
 
+// ─── Pseudonym generator ─────────────────────────────────────────
+const _ADJ = [
+  'Swift','Bold','Clever','Lucky','Bright','Cosmic','Golden','Silver',
+  'Mighty','Noble','Brave','Calm','Daring','Eager','Fierce','Grand',
+  'Happy','Keen','Lively','Merry','Quick','Rapid','Sharp','Wise'
+];
+const _ANI = [
+  'Falcon','Otter','Tiger','Eagle','Wolf','Fox','Bear','Hawk',
+  'Lion','Panda','Raven','Cobra','Lynx','Heron','Bison','Crane',
+  'Shark','Viper','Whale','Koala','Moose','Robin','Trout','Wren'
+];
+function generateAnimalName() {
+  const adj = _ADJ[Math.floor(Math.random() * _ADJ.length)];
+  const ani = _ANI[Math.floor(Math.random() * _ANI.length)];
+  const num = Math.floor(Math.random() * 100);
+  return adj + ani + num;
+}
+
 // ─── State ────────────────────────────────────────────────────────
 const state = {
   n: 1,
@@ -1749,7 +1767,7 @@ function initFirebase() {
       if (!input) return;
       input.addEventListener('change', async () => {
         if (!currentUser || !currentUser.isAnonymous) return;
-        const name = input.value.trim() || 'Guest ' + currentUser.uid.slice(-4);
+        const name = input.value.trim() || 'Guest' + generateAnimalName();
         await currentUser.updateProfile({ displayName: name });
         // Sync display
         document.getElementById('userName').textContent = name;
@@ -1777,10 +1795,23 @@ async function onSignIn(user) {
   document.getElementById('signedOut').style.display = 'none';
   document.getElementById('signedIn').style.display  = 'block';
 
-  // Generate default guest name for new anonymous users
+  // Generate AnimalNoun# name for new anonymous users
   if (isAnon && !user.displayName) {
-    const guestName = 'Guest ' + user.uid.slice(-4);
+    const animalName = generateAnimalName();
+    const guestName = 'Guest' + animalName;
     await user.updateProfile({ displayName: guestName });
+    // Store generatedName permanently in Firestore
+    await fbDb.collection('scores').doc(user.uid).set({
+      generatedName: animalName, displayName: guestName, uid: user.uid,
+    }, { merge: true });
+    console.log('✅ Generated guest name:', guestName);
+  }
+
+  // For non-anonymous users upgrading from Guest: strip "Guest" prefix
+  if (!isAnon && user.displayName && user.displayName.startsWith('Guest') && user.displayName.length > 5) {
+    const stripped = user.displayName.slice(5);
+    await user.updateProfile({ displayName: stripped });
+    console.log('✅ Upgraded name: Guest' + stripped + ' → ' + stripped);
   }
 
   const displayName = user.displayName || (isAnon ? 'Guest' : user.email);

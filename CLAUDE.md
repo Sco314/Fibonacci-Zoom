@@ -188,18 +188,20 @@ Firebase compat v10 loaded via CDN (not npm). Global `firebase` object available
 
 ### Collections
 ```
-scores/{uid}  →  { n, absN, fibDisplay, currentN, currentSubStep, currentStepDir, displayName, photoURL, uid, updatedAt }
+scores/{uid}  →  { n, absN, fibDisplay, currentN, currentSubStep, currentStepDir, generatedName, displayName, photoURL, uid, updatedAt }
 ```
 `fibDisplay` is the truncated F(n) string for leaderboard display.
 `absN` is used for leaderboard ordering. `n` is the best value (can be negative). Only one document per user — upserted on each new best.
 `currentN`, `currentSubStep`, `currentStepDir` track live progress (saved every 2s via debounced writes, merged into the same document). On sign-in, these are restored so users don't lose partial click progress.
+`generatedName` is the permanent AnimalNoun# pseudonym (e.g., "SwiftFalcon42"), assigned once on first anonymous sign-in. Never overwritten.
+`displayName` is the user-facing name: starts as "GuestSwiftFalcon42" for anonymous, becomes "SwiftFalcon42" on Google upgrade, or custom if user edits it.
 
 ### Auth flow
 1. `initFirebase()` called at boot
 2. `fbAuth.onAuthStateChanged` drives all UI state
-3. If no user session: auto `signInAnonymously()` — user gets a persistent UID, default name "Guest XXXX"
+3. If no user session: auto `signInAnonymously()` — user gets a persistent UID, default name "Guest" + AnimalNoun#
 4. Anonymous users can type a custom name, save progress, appear on leaderboard
-5. "Sign in with Google" links anonymous account via `linkWithPopup/Redirect` — preserves UID + data
+5. "Sign in with Google" links anonymous account via `linkWithPopup/Redirect` — preserves UID + data, strips "Guest" prefix from name
 6. On sign-out (Google users only): reset to n=1, auto-create new anonymous session
 7. Anonymous users cannot sign out (no sign-out button shown)
 
