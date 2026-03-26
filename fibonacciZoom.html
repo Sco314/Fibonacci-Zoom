@@ -336,6 +336,15 @@ html, body {
   font-weight: 600;
   margin-top: 2px;
 }
+/* guest name input */
+.guest-name-input {
+  width: 100%; padding: 6px 8px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--txt);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; margin-bottom: 4px;
+}
+.guest-name-input:focus { border-color: var(--amber); outline: none; }
 /* admin visibility: hide admin sections when user is not admin */
 .admin-hidden [data-admin="true"] { display: none !important; }
 .signout-btn {
@@ -582,10 +591,22 @@ html, body {
       <!-- Auth card -->
       <div class="card" id="authCard">
         <div class="card-title">Account</div>
-        <!-- Signed-out state -->
+        <!-- Signed-out state (shown briefly before anonymous auto-sign-in) -->
         <div id="signedOut">
-          <button class="auth-btn" id="signInBtn">
-            <svg viewBox="0 0 24 24" fill="currentColor">
+          <div class="lb-status">Connecting...</div>
+        </div>
+        <!-- Signed-in state (both anonymous and Google users) -->
+        <div id="signedIn" style="display:none">
+          <div class="user-row">
+            <img class="user-avatar" id="userAvatar" src="" alt="">
+            <div style="flex:1;min-width:0;">
+              <input type="text" class="guest-name-input" id="guestNameInput" placeholder="Enter your name" maxlength="20" style="display:none">
+              <div class="user-name" id="userName"></div>
+              <div class="user-score" id="userBestScore">Best: —</div>
+            </div>
+          </div>
+          <button class="auth-btn" id="signInBtn" style="margin-top:8px;display:none">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;flex-shrink:0">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
@@ -593,18 +614,7 @@ html, body {
             </svg>
             Sign in with Google
           </button>
-          <div class="lb-status">Sign in to save progress<br>& join the leaderboard</div>
-        </div>
-        <!-- Signed-in state -->
-        <div id="signedIn" style="display:none">
-          <div class="user-row">
-            <img class="user-avatar" id="userAvatar" src="" alt="">
-            <div style="flex:1;min-width:0;">
-              <div class="user-name" id="userName"></div>
-              <div class="user-score" id="userBestScore">Best: —</div>
-            </div>
-          </div>
-          <button class="signout-btn" id="signOutBtn">sign out</button>
+          <button class="signout-btn" id="signOutBtn" style="display:none">sign out</button>
         </div>
       </div>
 
@@ -627,8 +637,19 @@ html, body {
     <div class="card" id="mobileAuthCard">
       <div class="card-title">Account</div>
       <div id="mobileSignedOut">
-        <button class="auth-btn" id="mobileSignInBtn">
-          <svg viewBox="0 0 24 24" fill="currentColor">
+        <div class="lb-status">Connecting...</div>
+      </div>
+      <div id="mobileSignedIn" style="display:none">
+        <div class="user-row">
+          <img class="user-avatar" id="mobileUserAvatar" src="" alt="">
+          <div style="flex:1;min-width:0;">
+            <input type="text" class="guest-name-input" id="mobileGuestNameInput" placeholder="Enter your name" maxlength="20" style="display:none">
+            <div class="user-name" id="mobileUserName"></div>
+            <div class="user-score" id="mobileUserBestScore">Best: —</div>
+          </div>
+        </div>
+        <button class="auth-btn" id="mobileSignInBtn" style="margin-top:8px;display:none">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;flex-shrink:0">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
@@ -636,17 +657,7 @@ html, body {
           </svg>
           Sign in with Google
         </button>
-        <div class="lb-status">Sign in to save progress<br>& join the leaderboard</div>
-      </div>
-      <div id="mobileSignedIn" style="display:none">
-        <div class="user-row">
-          <img class="user-avatar" id="mobileUserAvatar" src="" alt="">
-          <div style="flex:1;min-width:0;">
-            <div class="user-name" id="mobileUserName"></div>
-            <div class="user-score" id="mobileUserBestScore">Best: —</div>
-          </div>
-        </div>
-        <button class="signout-btn" id="mobileSignOutBtn">sign out</button>
+        <button class="signout-btn" id="mobileSignOutBtn" style="display:none">sign out</button>
       </div>
     </div>
     <div class="card">
@@ -1190,48 +1201,61 @@ function commitN(newN) {
   maybeSaveScore(newN);
   debouncedSaveProgress();
 
-  // Celebration: zoom-through animation on new high score
-  if (isNewHigh && Math.abs(newN) >= 3) {
+  // Celebration: zoom-through animation on new high score (n >= 8)
+  if (isNewHigh && Math.abs(newN) >= 8) {
     playCelebration(Math.abs(newN));
   }
 }
 
-// ─── Celebration: zoom-through animation on new high ─────────────
-// Rapidly zooms from n=1 up to targetN with logarithmic acceleration.
-// Total duration is fixed (~3s) regardless of targetN.
+// ─── Celebration: smooth zoom in/out on new high ─────────────────
+// Phase 1: zoom into spiral center (unwind rotation, n decreases to 1)
+// Phase 2: zoom back out to current n (rewind rotation)
+// Duration: 5s at n=8, scales logarithmically for n>=9, caps at 5s
 let celebrationAF = null;
 function playCelebration(targetN) {
   if (celebrationAF) cancelAnimationFrame(celebrationAF);
-  const DURATION = 3000; // ms
+  const DURATION = targetN <= 8 ? 5000 : Math.min(5000, (2 + Math.log2(targetN) * 0.5) * 1000);
   const startTime = performance.now();
+
   const savedN = state.n;
   const savedRotation = state.rotation;
+  const savedPanX = state.panX;
+  const savedPanY = state.panY;
 
   function celebFrame(now) {
     const elapsed = now - startTime;
-    const t = Math.min(elapsed / DURATION, 1); // 0→1
+    const t = Math.min(elapsed / DURATION, 1);
 
-    // Ease: slow start, fast middle, decelerate at end (cubic ease-in-out)
-    const eased = t < 0.5
-      ? 4 * t * t * t
-      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    // phase: 0 at start → 1 at midpoint → 0 at end
+    let phase;
+    if (t < 0.5) {
+      const p = t * 2;
+      phase = 1 - Math.pow(1 - p, 3); // ease-out cubic
+    } else {
+      const p = (t - 0.5) * 2;
+      const e = p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2;
+      phase = 1 - e; // ease-in-out, inverted
+    }
 
-    // Map eased progress to n value (1 → targetN)
-    const displayN = Math.max(1, Math.round(1 + (targetN - 1) * eased));
+    // Interpolate n: targetN at edges, 1 at midpoint
+    const displayN = Math.max(1, Math.round(targetN - (targetN - 1) * phase));
+    // Interpolate rotation: savedRotation at edges, 0 at midpoint
+    const currentRotation = savedRotation * (1 - phase);
 
-    // Temporarily override state for drawing
     state.n = displayN;
-    state.rotation = (displayN - 1) * (Math.PI / 2);
+    state.rotation = currentRotation;
+    state.panX = 0; state.panY = 0;
     drawSpiral();
     animateNlToN(displayN);
 
     if (t < 1) {
       celebrationAF = requestAnimationFrame(celebFrame);
     } else {
-      // Restore actual state
       celebrationAF = null;
       state.n = savedN;
       state.rotation = savedRotation;
+      state.panX = savedPanX;
+      state.panY = savedPanY;
       drawSpiral();
       drawNumberLine();
       animateNlToN(savedN);
@@ -1485,10 +1509,17 @@ function updateMobileAccountBtn() {
 // Sync mobile signed-in/out panels
 function syncMobileAuth() {
   if (currentUser) {
+    const isAnon = currentUser.isAnonymous;
+    const name = currentUser.displayName || (isAnon ? 'Guest' : currentUser.email);
     document.getElementById('mobileSignedOut').style.display  = 'none';
     document.getElementById('mobileSignedIn').style.display   = 'block';
     document.getElementById('mobileUserAvatar').src = currentUser.photoURL || '';
-    document.getElementById('mobileUserName').textContent = currentUser.displayName || currentUser.email;
+    document.getElementById('mobileUserName').textContent = name;
+    // Show/hide elements for anon vs Google
+    document.getElementById('mobileSignInBtn').style.display     = isAnon ? '' : 'none';
+    document.getElementById('mobileSignOutBtn').style.display     = isAnon ? 'none' : '';
+    document.getElementById('mobileGuestNameInput').style.display = isAnon ? '' : 'none';
+    if (isAnon) document.getElementById('mobileGuestNameInput').value = name;
   } else {
     document.getElementById('mobileSignedOut').style.display  = 'block';
     document.getElementById('mobileSignedIn').style.display   = 'none';
@@ -1649,29 +1680,58 @@ function initFirebase() {
       }
     });
 
-    // Auth state listener
+    // Auth state listener — auto sign-in anonymously if no session
     fbAuth.onAuthStateChanged(async user => {
       currentUser = user;
       if (user) {
         await onSignIn(user);
       } else {
-        onSignOut();
+        // No session — create anonymous account automatically
+        try {
+          await fbAuth.signInAnonymously();
+          console.log('✅ Anonymous sign-in');
+        } catch (err) {
+          console.error('❌ Anonymous sign-in error:', err.message);
+        }
       }
     });
 
-    // Sign-in helper (popup on desktop, redirect on mobile)
+    // Sign-in helper: links anonymous → Google, or direct Google sign-in
     function doSignIn() {
       const provider = new firebase.auth.GoogleAuthProvider();
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        fbAuth.signInWithRedirect(provider).catch(err => {
-          console.error('❌ Sign-in redirect error:', err.message);
-        });
+
+      if (currentUser && currentUser.isAnonymous) {
+        // Link anonymous account to Google (preserves UID + all data)
+        if (isMobile) {
+          currentUser.linkWithRedirect(provider).catch(handleLinkError);
+        } else {
+          currentUser.linkWithPopup(provider).then(result => {
+            console.log('✅ Account linked:', result.user.displayName);
+          }).catch(handleLinkError);
+        }
       } else {
-        fbAuth.signInWithPopup(provider).catch(err => {
-          console.error('❌ Sign-in popup error:', err.message);
-        });
+        if (isMobile) {
+          fbAuth.signInWithRedirect(provider).catch(err => {
+            console.error('❌ Sign-in redirect error:', err.message);
+          });
+        } else {
+          fbAuth.signInWithPopup(provider).catch(err => {
+            console.error('❌ Sign-in popup error:', err.message);
+          });
+        }
       }
+    }
+
+    function handleLinkError(err) {
+      if (err.code === 'auth/credential-already-in-use') {
+        // Google account already exists with different UID — sign in with it
+        console.log('⚠️ Google account exists, signing in directly');
+        const cred = err.credential;
+        if (cred) fbAuth.signInWithCredential(cred);
+        return;
+      }
+      console.error('❌ Link error:', err.message);
     }
 
     // Sign-in buttons (desktop + mobile)
@@ -1683,6 +1743,25 @@ function initFirebase() {
     document.getElementById('signOutBtn').addEventListener('click', doSignOut);
     document.getElementById('mobileSignOutBtn').addEventListener('click', doSignOut);
 
+    // Guest name input handlers
+    function setupGuestNameInput(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.addEventListener('change', async () => {
+        if (!currentUser || !currentUser.isAnonymous) return;
+        const name = input.value.trim() || 'Guest ' + currentUser.uid.slice(-4);
+        await currentUser.updateProfile({ displayName: name });
+        // Sync display
+        document.getElementById('userName').textContent = name;
+        document.getElementById('mobileUserName').textContent = name;
+        updateMobileAccountBtn();
+        debouncedSaveProgress();
+        console.log('✅ Guest name set:', name);
+      });
+    }
+    setupGuestNameInput('guestNameInput');
+    setupGuestNameInput('mobileGuestNameInput');
+
     // Start leaderboard listener immediately (public read)
     startLeaderboardListener();
 
@@ -1693,13 +1772,29 @@ function initFirebase() {
 
 // ─── Sign-in handler ─────────────────────────────────────────────
 async function onSignIn(user) {
+  const isAnon = user.isAnonymous;
+
   document.getElementById('signedOut').style.display = 'none';
   document.getElementById('signedIn').style.display  = 'block';
-  document.getElementById('userAvatar').src = user.photoURL || '';
-  document.getElementById('userName').textContent    = user.displayName || user.email;
 
-  // Admin check
-  isAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+  // Generate default guest name for new anonymous users
+  if (isAnon && !user.displayName) {
+    const guestName = 'Guest ' + user.uid.slice(-4);
+    await user.updateProfile({ displayName: guestName });
+  }
+
+  const displayName = user.displayName || (isAnon ? 'Guest' : user.email);
+  document.getElementById('userAvatar').src = user.photoURL || '';
+  document.getElementById('userName').textContent = displayName;
+
+  // Show/hide elements based on anonymous vs Google
+  document.getElementById('signInBtn').style.display     = isAnon ? '' : 'none';
+  document.getElementById('signOutBtn').style.display     = isAnon ? 'none' : '';
+  document.getElementById('guestNameInput').style.display = isAnon ? '' : 'none';
+  if (isAnon) document.getElementById('guestNameInput').value = displayName;
+
+  // Admin check (anonymous users never admin)
+  isAdmin = !isAnon && ADMIN_EMAILS.includes((user.email || '').toLowerCase());
   applyAdminVisibility();
   if (isAdmin) console.log('✅ Admin access granted for', user.email);
 
@@ -1759,19 +1854,19 @@ function onSignOut() {
   userBestAbsN = 0;
   isAdmin = false;
   applyAdminVisibility();
-  document.getElementById('signedOut').style.display = 'block';
-  document.getElementById('signedIn').style.display  = 'none';
-  // Reset to default starting position for new/signed-out users
+  // Reset to default starting position
   state.n = 1; state.subStep = 0; state.stepDir = 1;
   state.rotation = 0; state.highestAbsN = 1;
   state.panX = 0; state.panY = 0;
-  // Reset mode to fib-steps (default for non-admin users)
   state.mode = 'fib-steps';
   document.querySelectorAll('.mode-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.mode === 'fib-steps'));
   centerNlOn(1);
   drawSpiral(); drawNumberLine(); updateModeInfo();
-  syncMobileAuth();
+  // Auto-create new anonymous session (onAuthStateChanged will call onSignIn)
+  if (fbAuth) fbAuth.signInAnonymously().catch(err => {
+    console.error('❌ Anonymous re-sign-in error:', err.message);
+  });
 }
 
 // ─── Display helpers ─────────────────────────────────────────────
@@ -1805,7 +1900,7 @@ async function maybeSaveScore(n) {
       currentN:       state.n,
       currentSubStep: state.subStep,
       currentStepDir: state.stepDir,
-      displayName: currentUser.displayName || currentUser.email,
+      displayName: currentUser.displayName || currentUser.email || 'Guest',
       photoURL:    currentUser.photoURL    || '',
       uid:         currentUser.uid,
       updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
@@ -1831,7 +1926,7 @@ async function saveProgress() {
       currentN:       state.n,
       currentSubStep: state.subStep,
       currentStepDir: state.stepDir,
-      displayName: currentUser.displayName || currentUser.email,
+      displayName: currentUser.displayName || currentUser.email || 'Guest',
       photoURL:    currentUser.photoURL    || '',
       uid:         currentUser.uid,
       updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
