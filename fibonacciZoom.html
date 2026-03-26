@@ -1875,7 +1875,13 @@ async function onSignIn(user) {
         }
       }
     } else {
-      // New user — save guest progress if they've moved beyond n=1
+      // Anonymous user with no saved data — sign them out to start fresh
+      // (this handles stale anonymous sessions persisted by Firebase IndexedDB)
+      if (isAnon) {
+        console.log('⚠️ Stale anonymous session with no data — signing out');
+        fbAuth.signOut();
+        return;
+      }
       userBestAbsN = 0;
       if (guestAbsN > 0) {
         updateUserBestDisplay(guestN);
