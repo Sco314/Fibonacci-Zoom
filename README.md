@@ -19,7 +19,7 @@ Built for mathematics education — designed for high school and college student
 - **Live leaderboard** — scores saved per user, top 10 displayed in real time with actual Fibonacci values. Guest users auto-save via anonymous auth; optional Google sign-in to sync across devices
 - **Progress restored** — sign in and the app restores your exact position including partial click progress; new users start at F(1) = 1
 - **Mobile friendly** — responsive layout with bottom sheet for account/leaderboard, compact number line, and `signInWithRedirect` for mobile Safari/Chrome
-- **Level progression** — unlockable features as you advance: confetti at F(34), celebration zoom at F(55), flower power-ups at F(89), smiley face power-ups at F(144)
+- **Level progression** — unlockable features at each level: guest account at F(21), confetti at F(34), celebration zoom at F(55), flower power-ups at F(89), smiley power-ups at F(144), Mona Lisa easter egg at F(233)
 
 ---
 
