@@ -470,6 +470,24 @@ html, body {
 .leg-item { display: flex; align-items: center; gap: 5px; }
 .leg-line { width: 14px; height: 2px; border-radius: 1px; }
 
+/* power flowers */
+.power-flower {
+  position: absolute;
+  width: 44px; height: 44px;
+  cursor: pointer;
+  animation: flowerLife 5s ease-in-out forwards;
+  transform-origin: center;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.3));
+}
+.power-flower svg { width: 100%; height: 100%; }
+@keyframes flowerLife {
+  0%   { transform: scale(0); opacity: 0; }
+  15%  { transform: scale(1.15); opacity: 1; }
+  20%  { transform: scale(1); }
+  75%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
 </style>
 </head>
 <body>
@@ -578,6 +596,8 @@ html, body {
       <!-- Spiral canvas -->
       <div class="canvas-box">
         <canvas id="spiralCanvas"></canvas>
+        <canvas id="confettiCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;"></canvas>
+        <div id="flowerLayer" style="position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;z-index:6;"></div>
         <div class="canvas-footer">
           <span id="zoomLbl"></span>
         </div>
@@ -806,6 +826,122 @@ const sc    = document.getElementById('spiralCanvas');
 const sctx  = sc.getContext('2d');
 const nl    = document.getElementById('nlCanvas');
 const nlctx = nl.getContext('2d');
+const cc    = document.getElementById('confettiCanvas');
+const cctx  = cc.getContext('2d');
+
+// ─── Input position tracking (for confetti placement) ────────────
+let lastInputX = 0, lastInputY = 0;
+let lastInputSource = 'key'; // 'mouse' | 'touch' | 'key'
+
+// ─── Confetti particle system ────────────────────────────────────
+let confettiParticles = [];
+let confettiAnimating = false;
+
+function launchConfetti(x, y, count) {
+  const actual = Math.min(count, 150);
+  for (let i = 0; i < actual; i++) {
+    const [r,g,b] = COLORS[Math.floor(Math.random() * COLORS.length)];
+    confettiParticles.push({
+      x: x + (Math.random() - 0.5) * 40,
+      y: y,
+      vx: (Math.random() - 0.5) * 14,
+      vy: -Math.random() * 16 - 4,
+      w: Math.random() * 8 + 4,
+      h: Math.random() * 6 + 2,
+      color: `rgb(${r},${g},${b})`,
+      rotation: Math.random() * Math.PI * 2,
+      rv: (Math.random() - 0.5) * 0.3,
+      alpha: 1,
+    });
+  }
+  if (!confettiAnimating) {
+    confettiAnimating = true;
+    requestAnimationFrame(animateConfetti);
+  }
+}
+
+function animateConfetti() {
+  const W = state._sw, H = state._sh;
+  cctx.clearRect(0, 0, W, H);
+  let alive = false;
+  for (const p of confettiParticles) {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.25;
+    p.rotation += p.rv;
+    p.alpha -= 0.005;
+    if (p.alpha <= 0) continue;
+    alive = true;
+    cctx.save();
+    cctx.globalAlpha = p.alpha;
+    cctx.translate(p.x, p.y);
+    cctx.rotate(p.rotation);
+    cctx.fillStyle = p.color;
+    cctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+    cctx.restore();
+  }
+  if (alive) {
+    requestAnimationFrame(animateConfetti);
+  } else {
+    confettiParticles = [];
+    confettiAnimating = false;
+    cctx.clearRect(0, 0, W, H);
+  }
+}
+
+// ─── Flower power-ups ────────────────────────────────────────────
+let flowerInterval = null;
+
+function createFlowerSVG(color) {
+  const [r,g,b] = color;
+  let petals = '';
+  for (let i = 0; i < 5; i++) {
+    const angle = i * 72;
+    petals += `<ellipse cx="22" cy="8" rx="7" ry="13" fill="rgba(${r},${g},${b},0.85)" transform="rotate(${angle} 22 22)"/>`;
+  }
+  return `<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">${petals}<circle cx="22" cy="22" r="6" fill="#fbbf24"/></svg>`;
+}
+
+function startFlowerSpawning() {
+  if (flowerInterval) return;
+  flowerInterval = setInterval(() => {
+    if (Math.abs(state.n) < 10 || celebrationAF) return;
+    spawnFlower();
+  }, 2000 + Math.random() * 1500);
+}
+
+function stopFlowerSpawning() {
+  if (flowerInterval) { clearInterval(flowerInterval); flowerInterval = null; }
+  const layer = document.getElementById('flowerLayer');
+  while (layer.firstChild) layer.firstChild.remove();
+}
+
+function spawnFlower() {
+  const layer = document.getElementById('flowerLayer');
+  const box = layer.getBoundingClientRect();
+  if (box.width < 50 || box.height < 50) return;
+  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+
+  const el = document.createElement('div');
+  el.className = 'power-flower';
+  el.innerHTML = createFlowerSVG(color);
+  el.style.left = (20 + Math.random() * (box.width - 64)) + 'px';
+  el.style.top  = (20 + Math.random() * (box.height - 64)) + 'px';
+
+  function collectFlower(e) {
+    e.stopPropagation();
+    if (e.type === 'touchend') e.preventDefault();
+    for (let i = 0; i < 5; i++) tickInput(+1);
+    const rect = el.getBoundingClientRect();
+    const boxRect = cc.getBoundingClientRect();
+    launchConfetti(rect.left - boxRect.left + 22, rect.top - boxRect.top + 22, 20);
+    el.remove();
+  }
+  el.addEventListener('click', collectFlower);
+  el.addEventListener('touchend', collectFlower);
+
+  layer.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 5000);
+}
 
 function resizeCanvases() {
   const sr = sc.parentElement.getBoundingClientRect();
@@ -822,6 +958,9 @@ function resizeCanvases() {
   sc.width  = sw * devicePixelRatio;
   sc.height = sh * devicePixelRatio;
   sctx.scale(devicePixelRatio, devicePixelRatio);
+  cc.width  = sw * devicePixelRatio;
+  cc.height = sh * devicePixelRatio;
+  cctx.scale(devicePixelRatio, devicePixelRatio);
   state._sw = sw; state._sh = sh;
 
   nl.width  = nw * devicePixelRatio;
@@ -1202,6 +1341,17 @@ function tickInput(dir) {
 
   // Update mode-info card to show progress toward next n
   updateModeInfo();
+
+  // Confetti on every tick at n >= 9
+  if (Math.abs(state.n) >= 9) {
+    const count = Math.min(Number(fibPos(Math.abs(state.n))), 150);
+    if (lastInputSource === 'key') {
+      launchConfetti(state._sw / 2, state._sh / 2, count);
+    } else {
+      const boxRect = cc.getBoundingClientRect();
+      launchConfetti(lastInputX - boxRect.left, lastInputY - boxRect.top, count);
+    }
+  }
 }
 
 function commitN(newN) {
@@ -1231,6 +1381,10 @@ function commitN(newN) {
   if (isNewHigh && Math.abs(newN) >= 8) {
     playCelebration(Math.abs(newN));
   }
+
+  // Start flower power-ups at n >= 10
+  if (Math.abs(newN) >= 10) startFlowerSpawning();
+  else stopFlowerSpawning();
 }
 
 // ─── Celebration: smooth zoom in/out on new high ─────────────────
@@ -1363,8 +1517,8 @@ window.addEventListener('mousemove', e => {
 window.addEventListener('mouseup', e => {
   if (state.scDown && !state.dragMoved) {
     // Click (not drag)
-    if (e.button === 0) tickInput(+1);
-    if (e.button === 2) tickInput(-1);
+    if (e.button === 0) { lastInputX = e.clientX; lastInputY = e.clientY; lastInputSource = 'mouse'; tickInput(+1); }
+    if (e.button === 2) { lastInputX = e.clientX; lastInputY = e.clientY; lastInputSource = 'mouse'; tickInput(-1); }
   }
   if (state.scDown) { state.scDown = false; state.dragMoved = false; sc.classList.remove('panning'); }
   if (state.nlDragging) { state.nlDragging = false; nlMomentum(); }
@@ -1410,10 +1564,10 @@ sc.addEventListener('touchend', e => {
   const dist = Math.sqrt(dx*dx + dy*dy);
 
   if (!state.touchMoved && elapsed < 300) {
-    // Short tap → positive
+    lastInputX = e.changedTouches[0].clientX; lastInputY = e.changedTouches[0].clientY; lastInputSource = 'touch';
     tickInput(+1);
   } else if (elapsed < 500 && dist > 25) {
-    // Directional swipe: up/right = +1, down/left = -1
+    lastInputX = e.changedTouches[0].clientX; lastInputY = e.changedTouches[0].clientY; lastInputSource = 'touch';
     const swipeUp = Math.abs(dy) > Math.abs(dx) ? dy < 0 : dx > 0;
     tickInput(swipeUp ? +1 : -1);
   }
@@ -1601,11 +1755,12 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 // ─── Keyboard ────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
+  if (e.repeat) return; // 1 keypress = 1 tick, ignore held keys
   if (e.key === 'ArrowUp'   || e.key === 'ArrowRight' ||
       e.key === ' '         || e.key === 'Enter'       ||
-      e.key === '+'         || e.key === '=') { e.preventDefault(); tickInput(+1); }
+      e.key === '+'         || e.key === '=') { e.preventDefault(); lastInputSource = 'key'; tickInput(+1); }
   if (e.key === 'ArrowDown' || e.key === 'ArrowLeft'  ||
-      e.key === '-'         || e.key === '_') { e.preventDefault(); tickInput(-1); }
+      e.key === '-'         || e.key === '_') { e.preventDefault(); lastInputSource = 'key'; tickInput(-1); }
 });
 
 // ─── Resize ──────────────────────────────────────────────────────
