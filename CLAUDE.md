@@ -290,6 +290,10 @@ Level 12 · F(12) = 144 · Smiley Face Power-ups
   Landed smiley stays visible for 5 seconds, then fades.
   Shows a +## floating animation on collection.
 
+**IMPORTANT**: Levels 9, 10, 11 features are EXACT — they only activate at that specific n value, not as a range. When the user advances past that n, the feature stops. Level 8 celebration zoom IS a range (n >= 8, plays on every new high).
+
+Celebration zoom duration: 8s at n=8, +1s per level, caps at 21s. Formula: `Math.min(21000, 8000 + (targetN - 8) * 1000)`
+
 ---
 
 ## Style conventions

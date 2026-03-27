@@ -537,6 +537,11 @@ html, body {
 </style>
 </head>
 <body>
+<!-- Hidden Mona Lisa face crop for n=12 easter egg -->
+<img id="monaLisa" crossorigin="anonymous" style="display:none"
+     src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Mona_Lisa_detail_face.jpg/220px-Mona_Lisa_detail_face.jpg"
+     alt="">
+
 <div class="shell">
 
   <!-- Top bar -->
@@ -950,7 +955,7 @@ function createFlowerSVG(color) {
 function startFlowerSpawning() {
   if (flowerInterval) return;
   flowerInterval = setInterval(() => {
-    if (Math.abs(state.n) < 11 || celebrationAF) return;
+    if (Math.abs(state.n) !== 10 || celebrationAF) return;
     spawnFlower();
   }, 2000 + Math.random() * 1500);
 }
@@ -1004,7 +1009,7 @@ function showPointsAnimation(x, y, points) {
 
 // ─── Smiley face power-ups (n >= 12) ─────────────────────────────
 let smileyClickCounter = 0;
-const SMILEY_TRIGGERS = [3, 5, 8, 13, 21];
+const SMILEY_TRIGGERS = [3, 5, 8, 13, 21, 34];
 const SMILEY_DECAY = [34, 21, 13, 8, 5, 3, 2, 1, 1, 0];
 
 function createSmileySVG(color) {
@@ -1440,6 +1445,26 @@ function drawSpiral() {
     });
   }
 
+  // ── Mona Lisa easter egg on k=12 square ──────────────────────────
+  if (absN >= 12) {
+    const mlImg = document.getElementById('monaLisa');
+    if (mlImg && mlImg.complete && mlImg.naturalWidth > 0) {
+      const sq12 = squares.find(sq => sq.k === 12);
+      if (sq12 && sq12.size > 8) {
+        const cx = sq12.x + sq12.size / 2;
+        const cy = sq12.y + sq12.size / 2;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-rotAngle);
+        const drawSz = sq12.size * 0.9;
+        ctx.globalAlpha = 0.85;
+        ctx.drawImage(mlImg, -drawSz/2, -drawSz/2, drawSz, drawSz);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
+  }
+
   ctx.restore();
   updateFooter();
 }
@@ -1504,8 +1529,8 @@ function tickInput(dir) {
   // Update mode-info card to show progress toward next n
   updateModeInfo();
 
-  // Confetti on every tick at n >= 9
-  if (Math.abs(state.n) >= 9) {
+  // Confetti on every tick at n = 9 only
+  if (Math.abs(state.n) === 9) {
     const count = Math.min(Number(fibPos(Math.abs(state.n))), 150);
     if (lastInputSource === 'key') {
       launchConfetti(state._sw / 2, state._sh / 2, count);
@@ -1515,8 +1540,8 @@ function tickInput(dir) {
     }
   }
 
-  // Smiley face power-ups at n >= 12 — fire at Fibonacci click counts
-  if (Math.abs(state.n) >= 12) {
+  // Smiley face power-ups at n = 11 only — fire at Fibonacci click counts
+  if (Math.abs(state.n) === 11) {
     smileyClickCounter++;
     if (SMILEY_TRIGGERS.includes(smileyClickCounter)) {
       launchSmileySpread(lastInputX, lastInputY);
@@ -1547,13 +1572,14 @@ function commitN(newN) {
   maybeSaveScore(newN);
   debouncedSaveProgress();
 
-  // Celebration: zoom-through animation on new high score (n >= 10)
-  if (isNewHigh && Math.abs(newN) >= 10) {
+  // Celebration: zoom-through animation on new high score (n >= 8)
+  if (isNewHigh && Math.abs(newN) >= 8) {
     playCelebration(Math.abs(newN));
   }
 
-  // Flower power-ups at n >= 11
-  if (Math.abs(newN) >= 11) startFlowerSpawning();
+  // Level-specific power-ups (exact n, not ranges)
+  const absNewN = Math.abs(newN);
+  if (absNewN === 10) startFlowerSpawning();
   else stopFlowerSpawning();
 
   // Reset smiley click counter on each level advance
@@ -1563,11 +1589,11 @@ function commitN(newN) {
 // ─── Celebration: smooth zoom in/out on new high ─────────────────
 // Phase 1: zoom into spiral center (unwind rotation, n decreases to 1)
 // Phase 2: zoom back out to current n (rewind rotation)
-// Duration: 5s at n=8, scales logarithmically for n>=9, caps at 5s
+// Duration: 8s at n=8, +1s per level, caps at 21s
 let celebrationAF = null;
 function playCelebration(targetN) {
   if (celebrationAF) cancelAnimationFrame(celebrationAF);
-  const DURATION = targetN <= 8 ? 5000 : Math.min(5000, (2 + Math.log2(targetN) * 0.5) * 1000);
+  const DURATION = Math.min(21000, 8000 + (targetN - 8) * 1000);
   const startTime = performance.now();
 
   const savedN = state.n;
