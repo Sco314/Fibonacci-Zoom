@@ -155,7 +155,7 @@ html, body {
 }
 
 .card-title {
-  font-size: 13px; font-weight: 600;
+  font-size: 15px; font-weight: 600;
   color: var(--txt); margin-bottom: 12px;
   display: flex; align-items: center; gap: 7px;
   letter-spacing: .04em;
@@ -196,21 +196,29 @@ html, body {
   .nl-wrapper { height: 64px; }
   .right-col { order: 0; gap: 4px; }
 
-  /* Mobile top bar: show account button inline */
+  /* Mobile: hide old account button, show info row instead */
+  .mobile-account-btn { display: none !important; }
   .top-bar-right { gap: 6px; }
-  .mobile-account-btn {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 8px; padding: 4px 10px;
-    color: var(--txt); cursor: pointer;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600;
+
+  /* Mobile info row: account card + leaderboard top 3 side by side */
+  .mobile-info-row {
+    display: flex; gap: 6px; flex-shrink: 0;
   }
-  .mobile-account-btn:hover { border-color: var(--amber); }
-  .mobile-account-btn img {
-    width: 22px; height: 22px; border-radius: 50%;
-    object-fit: cover;
+  .mobile-info-row .card {
+    flex: 1; min-width: 0;
+    padding: 8px 10px;
   }
+  .mobile-info-row .card-title {
+    font-size: 12px; margin-bottom: 6px;
+  }
+  .mobile-info-row .user-name { font-size: 13px; }
+  .mobile-info-row .user-score { font-size: 11px; }
+  .mobile-info-row .auth-btn { font-size: 10px; padding: 6px 8px; margin-top: 4px; }
+  .mobile-info-row .lb-row { padding: 3px 0; }
+  .mobile-info-row .lb-name { font-size: 11px; }
+  .mobile-info-row .lb-score { font-size: 10px; }
+  .mobile-info-row .lb-rank { font-size: 11px; }
+  #mobileInfoRow { display: flex !important; }
 
   /* Mobile bottom sheet for account/leaderboard */
   .mobile-sheet-backdrop {
@@ -243,6 +251,7 @@ html, body {
 /* Hide mobile-only elements on desktop */
 @media (min-width: 641px) {
   .mobile-account-btn { display: none !important; }
+  .mobile-info-row { display: none !important; }
   .mobile-sheet-backdrop { display: none !important; }
 }
 /* tablet: hide left sidebar, keep right sidebar */
@@ -364,25 +373,25 @@ html, body {
 .lb-row:last-child { border-bottom: none; }
 .lb-rank {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px; color: var(--txt3);
-  width: 16px; flex-shrink: 0; text-align: right;
+  font-size: 13px; color: var(--txt3);
+  width: 22px; flex-shrink: 0; text-align: right;
 }
 .lb-rank.top1 { color: #fbbf24; }
 .lb-rank.top2 { color: #94a3b8; }
 .lb-rank.top3 { color: #cd7f32; }
 .lb-avatar {
-  width: 20px; height: 20px; border-radius: 50%;
+  width: 24px; height: 24px; border-radius: 50%;
   object-fit: cover; flex-shrink: 0;
   background: var(--border);
 }
 .lb-name {
-  flex: 1; font-size: 11px; color: var(--txt2);
+  flex: 1; font-size: 13px; color: var(--txt2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .lb-name.is-me { color: var(--amber); font-weight: 600; }
 .lb-score {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px; color: var(--txt);
+  font-size: 12px; color: var(--txt);
   font-weight: 600;
   flex-shrink: 0;
   max-width: 70px;
@@ -493,7 +502,7 @@ html, body {
 .points-popup {
   position: absolute;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 18px; font-weight: 700;
+  font-size: 26px; font-weight: 700;
   color: #fbbf24;
   pointer-events: none;
   animation: pointsFloat 1s ease-out forwards;
@@ -538,9 +547,10 @@ html, body {
 </head>
 <body>
 <!-- Hidden Mona Lisa face crop for n=12 easter egg -->
-<img id="monaLisa" crossorigin="anonymous" style="display:none"
-     src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Mona_Lisa_detail_face.jpg/220px-Mona_Lisa_detail_face.jpg"
-     alt="">
+<!-- Mona Lisa for n=12 easter egg — drawn on canvas if loaded -->
+<img id="monaLisa" style="display:none"
+     src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/200px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg"
+     onerror="this.src=''" alt="">
 
 <div class="shell">
 
@@ -621,6 +631,23 @@ html, body {
       <div class="btn-row" style="padding-top:14px; margin-top:4px;">
         <button class="btn btn-secondary" id="resetBtn">Reset</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Mobile info row: account + top 3 leaderboard (visible on mobile only) -->
+  <div class="mobile-info-row" id="mobileInfoRow" style="display:none;">
+    <div class="card">
+      <div id="mobileInfoAccount">
+        <div class="user-name" id="mobileInfoName" style="font-size:13px;">—</div>
+        <div class="user-score" id="mobileInfoScore">Best: —</div>
+        <button class="auth-btn" id="mobileInfoSignIn" style="font-size:10px;padding:6px 8px;margin-top:4px;display:none;">
+          Sign in with Google
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="font-size:12px;margin-bottom:4px;">🏆 Top 3</div>
+      <div id="mobileInfoLb"><div class="lb-empty" style="font-size:10px;">Loading...</div></div>
     </div>
   </div>
 
@@ -1029,7 +1056,7 @@ function launchSmileySpread(pageX, pageY) {
   const cx = (pageX || boxRect.left + boxRect.width / 2) - boxRect.left;
   const cy = (pageY || boxRect.top + boxRect.height / 2) - boxRect.top;
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-  const count = 8 + Math.floor(Math.random() * 5); // 8-12 smileys
+  const count = 6 + Math.floor(Math.random() * 4); // 6-9 smiley confetti
   const smileys = [];
 
   for (let i = 0; i < count; i++) {
@@ -1040,26 +1067,28 @@ function launchSmileySpread(pageX, pageY) {
     el.style.top = cy + 'px';
     el.style.opacity = '1';
 
-    // Click while airborne = +55
-    function airCollect(e) {
-      e.stopPropagation();
-      if (e.type === 'touchend') e.preventDefault();
-      for (let j = 0; j < 55; j++) tickInput(+1);
-      const rect = el.getBoundingClientRect();
-      launchConfetti(rect.left - boxRect.left + 15, rect.top - boxRect.top + 15, 30);
-      showPointsAnimation(parseFloat(el.style.left), parseFloat(el.style.top) - 10, 55);
-      smileys.forEach(s => { if (s.parentNode) s.remove(); });
-      el.remove();
+    // Only the first smiley is the clickable power-up (airborne)
+    if (i === 0) {
+      function airCollect(e) {
+        e.stopPropagation();
+        if (e.type === 'touchend') e.preventDefault();
+        for (let j = 0; j < 55; j++) tickInput(+1);
+        launchConfetti(parseFloat(el.style.left), parseFloat(el.style.top), 30);
+        showPointsAnimation(parseFloat(el.style.left), parseFloat(el.style.top) - 10, 55);
+        smileys.forEach(s => { if (s.parentNode) s.remove(); });
+      }
+      el.addEventListener('click', airCollect);
+      el.addEventListener('touchend', airCollect);
+    } else {
+      el.style.pointerEvents = 'none'; // decorative only
     }
-    el.addEventListener('click', airCollect);
-    el.addEventListener('touchend', airCollect);
 
     layer.appendChild(el);
     smileys.push(el);
 
-    // Scatter outward
-    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
-    const dist = 60 + Math.random() * 120;
+    // Scatter outward — wider spread
+    const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
+    const dist = 100 + Math.random() * 200;
     requestAnimationFrame(() => {
       el.style.left = (cx + Math.cos(angle) * dist) + 'px';
       el.style.top  = (cy + Math.sin(angle) * dist) + 'px';
@@ -1193,14 +1222,14 @@ function drawNumberLine() {
     // Fib value
     const fibV   = fmt(fib(n));
     const display = fibV.length > 10 ? fibV.slice(0,9)+'…' : fibV;
-    const fontSize = isCenter ? 15 : Math.max(9, 13 - dist * 1.5);
+    const fontSize = isCenter ? 20 : Math.max(11, 16 - dist * 1.5);
     ctx.font = `${isCenter ? 'italic 600' : '400'} ${fontSize}px 'Cormorant Garamond', serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.fillStyle = `rgba(${baseR},${baseG},${baseB},${alpha})`;
-    ctx.fillText(display, cx, mid - 14);
+    ctx.fillText(display, cx, mid - 16);
 
     // n label
-    ctx.font = `300 ${isCenter ? 11 : 9}px 'JetBrains Mono', monospace`;
+    ctx.font = `300 ${isCenter ? 13 : 11}px 'JetBrains Mono', monospace`;
     ctx.textBaseline = 'top';
     ctx.fillStyle = `rgba(${baseR},${baseG},${baseB},${alpha * 0.75})`;
     ctx.fillText(`n=${n}`, cx, mid + 10);
@@ -1228,6 +1257,28 @@ function drawNumberLine() {
       ctx.arc(cx, mid, 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
       ctx.strokeStyle = `rgba(${baseR},${baseG},${baseB},${0.8 * progress})`;
       ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+
+  // ── Progress bar between current and target n ──────────────────
+  if (state.mode === 'fib-steps' && progress > 0) {
+    const fromCx = cellCentre(state.n);
+    const toCx   = cellCentre(targetN);
+    if (fromCx > -NL_CELL && toCx < W + NL_CELL) {
+      const barY = mid + 22;
+      const barW = Math.abs(toCx - fromCx);
+      const barX = Math.min(fromCx, toCx);
+      // Background bar
+      ctx.fillStyle = 'rgba(245,166,35,0.12)';
+      ctx.fillRect(barX, barY, barW, 4);
+      // Filled progress
+      ctx.fillStyle = 'rgba(245,166,35,0.6)';
+      ctx.fillRect(barX, barY, barW * progress, 4);
+      // % text
+      ctx.font = '600 10px JetBrains Mono, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillStyle = 'rgba(245,166,35,0.7)';
+      ctx.fillText(Math.round(progress * 100) + '%', (fromCx + toCx) / 2, barY + 6);
     }
   }
 
@@ -1593,7 +1644,7 @@ function commitN(newN) {
 let celebrationAF = null;
 function playCelebration(targetN) {
   if (celebrationAF) cancelAnimationFrame(celebrationAF);
-  const DURATION = Math.min(21000, 8000 + (targetN - 8) * 1000);
+  const DURATION = Math.min(5000, 3000 + (targetN - 8) * 200);
   const startTime = performance.now();
 
   const savedN = state.n;
@@ -1904,11 +1955,37 @@ function syncMobileAuth() {
     document.getElementById('mobileSignedIn').style.display   = 'none';
   }
   updateMobileAccountBtn();
+  // Sync mobile info row
+  const infoName = document.getElementById('mobileInfoName');
+  const infoScore = document.getElementById('mobileInfoScore');
+  const infoSignIn = document.getElementById('mobileInfoSignIn');
+  if (infoName) {
+    if (currentUser) {
+      const name = currentUser.displayName || 'Guest';
+      infoName.textContent = name;
+      infoSignIn.style.display = currentUser.isAnonymous ? '' : 'none';
+    } else {
+      infoName.textContent = '—';
+      infoScore.textContent = 'Reach Fibonacci 21';
+      infoSignIn.style.display = 'none';
+    }
+  }
 }
 // Sync mobile leaderboard (called from renderLeaderboard)
 function syncMobileLeaderboard(html, statusText) {
   document.getElementById('mobileLbList').innerHTML  = html;
   document.getElementById('mobileLbStatus').textContent = statusText;
+  // Sync mobile info row top 3
+  const infoLb = document.getElementById('mobileInfoLb');
+  if (infoLb) {
+    // Extract just the first 3 rows from the full leaderboard HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const rows = tempDiv.querySelectorAll('.lb-row');
+    let top3 = '';
+    for (let i = 0; i < Math.min(3, rows.length); i++) top3 += rows[i].outerHTML;
+    infoLb.innerHTML = top3 || '<div class="lb-empty" style="font-size:10px;">No scores yet</div>';
+  }
 }
 
 // ─── Toggles (all panels) ────────────────────────────────────────
@@ -2161,6 +2238,10 @@ function initFirebase() {
     setupGuestNameInput('guestNameInput');
     setupGuestNameInput('mobileGuestNameInput');
 
+    // Mobile info row sign-in button
+    const mobileInfoSignIn = document.getElementById('mobileInfoSignIn');
+    if (mobileInfoSignIn) mobileInfoSignIn.addEventListener('click', doSignIn);
+
     // Start leaderboard listener immediately (public read)
     startLeaderboardListener();
 
@@ -2277,6 +2358,8 @@ function updateUserBestDisplay(n) {
   document.getElementById('userBestScore').textContent = text;
   const mobileEl = document.getElementById('mobileUserBestScore');
   if (mobileEl) mobileEl.textContent = text;
+  const infoScore = document.getElementById('mobileInfoScore');
+  if (infoScore) infoScore.textContent = text;
 }
 
 function fibDisplayStr(n) {
