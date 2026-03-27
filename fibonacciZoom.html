@@ -489,6 +489,51 @@ html, body {
   100% { transform: scale(0); opacity: 0; }
 }
 
+/* +## floating points animation */
+.points-popup {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px; font-weight: 700;
+  color: #fbbf24;
+  pointer-events: none;
+  animation: pointsFloat 1s ease-out forwards;
+  z-index: 8;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+@keyframes pointsFloat {
+  0%   { opacity: 1; transform: translateY(0) scale(1.2); }
+  30%  { opacity: 1; transform: translateY(-15px) scale(1); }
+  100% { opacity: 0; transform: translateY(-45px) scale(0.8); }
+}
+
+/* smiley power-ups */
+.power-smiley {
+  position: absolute;
+  width: 44px; height: 44px;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: smileyPulse 5s ease-in-out forwards;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.4));
+}
+.power-smiley svg { width: 100%; height: 100%; }
+@keyframes smileyPulse {
+  0%   { transform: scale(0); opacity: 0; }
+  10%  { transform: scale(1.2); opacity: 1; }
+  15%  { transform: scale(1); }
+  85%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+/* smiley confetti scatter */
+.smiley-confetti {
+  position: absolute;
+  width: 30px; height: 30px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.7s cubic-bezier(.25,.46,.45,.94);
+  z-index: 9;
+}
+.smiley-confetti svg { width: 100%; height: 100%; }
+
 </style>
 </head>
 <body>
@@ -905,7 +950,7 @@ function createFlowerSVG(color) {
 function startFlowerSpawning() {
   if (flowerInterval) return;
   flowerInterval = setInterval(() => {
-    if (Math.abs(state.n) < 10 || celebrationAF) return;
+    if (Math.abs(state.n) < 11 || celebrationAF) return;
     spawnFlower();
   }, 2000 + Math.random() * 1500);
 }
@@ -935,6 +980,7 @@ function spawnFlower() {
     const rect = el.getBoundingClientRect();
     const boxRect = cc.getBoundingClientRect();
     launchConfetti(rect.left - boxRect.left + 22, rect.top - boxRect.top + 22, 20);
+    showPointsAnimation(parseFloat(el.style.left), parseFloat(el.style.top) - 10, 5);
     el.remove();
   }
   el.addEventListener('click', collectFlower);
@@ -942,6 +988,121 @@ function spawnFlower() {
 
   layer.appendChild(el);
   setTimeout(() => { if (el.parentNode) el.remove(); }, 5000);
+}
+
+// ─── +## floating points animation ───────────────────────────────
+function showPointsAnimation(x, y, points) {
+  const layer = document.getElementById('flowerLayer');
+  const el = document.createElement('div');
+  el.className = 'points-popup';
+  el.textContent = '+' + points;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+// ─── Smiley face power-ups (n >= 12) ─────────────────────────────
+let smileyClickCounter = 0;
+const SMILEY_TRIGGERS = [3, 5, 8, 13, 21];
+const SMILEY_DECAY = [34, 21, 13, 8, 5, 3, 2, 1, 1, 0];
+
+function createSmileySVG(color) {
+  const [r,g,b] = color;
+  const dk = `rgb(${Math.max(0,r-60)},${Math.max(0,g-60)},${Math.max(0,b-60)})`;
+  return `<svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="22" cy="22" r="20" fill="rgb(${r},${g},${b})" stroke="${dk}" stroke-width="1.5"/>
+    <circle cx="15" cy="17" r="3" fill="#1a1a2e"/>
+    <circle cx="29" cy="17" r="3" fill="#1a1a2e"/>
+    <path d="M 12,27 Q 22,37 32,27" fill="none" stroke="#1a1a2e" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function launchSmileySpread(pageX, pageY) {
+  const layer = document.getElementById('flowerLayer');
+  const boxRect = layer.parentElement.getBoundingClientRect();
+  const cx = (pageX || boxRect.left + boxRect.width / 2) - boxRect.left;
+  const cy = (pageY || boxRect.top + boxRect.height / 2) - boxRect.top;
+  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const count = 8 + Math.floor(Math.random() * 5); // 8-12 smileys
+  const smileys = [];
+
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'smiley-confetti';
+    el.innerHTML = createSmileySVG(color);
+    el.style.left = cx + 'px';
+    el.style.top = cy + 'px';
+    el.style.opacity = '1';
+
+    // Click while airborne = +55
+    function airCollect(e) {
+      e.stopPropagation();
+      if (e.type === 'touchend') e.preventDefault();
+      for (let j = 0; j < 55; j++) tickInput(+1);
+      const rect = el.getBoundingClientRect();
+      launchConfetti(rect.left - boxRect.left + 15, rect.top - boxRect.top + 15, 30);
+      showPointsAnimation(parseFloat(el.style.left), parseFloat(el.style.top) - 10, 55);
+      smileys.forEach(s => { if (s.parentNode) s.remove(); });
+      el.remove();
+    }
+    el.addEventListener('click', airCollect);
+    el.addEventListener('touchend', airCollect);
+
+    layer.appendChild(el);
+    smileys.push(el);
+
+    // Scatter outward
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = 60 + Math.random() * 120;
+    requestAnimationFrame(() => {
+      el.style.left = (cx + Math.cos(angle) * dist) + 'px';
+      el.style.top  = (cy + Math.sin(angle) * dist) + 'px';
+    });
+  }
+
+  // After 800ms: remove all except one, land the survivor
+  setTimeout(() => {
+    const alive = smileys.filter(s => s.parentNode);
+    if (!alive.length) return;
+    // Pick one survivor
+    const survivor = alive[Math.floor(Math.random() * alive.length)];
+    alive.forEach(s => { if (s !== survivor && s.parentNode) s.remove(); });
+
+    // Convert survivor to a landed smiley
+    survivor.className = 'power-smiley';
+    survivor.style.transition = 'none';
+    const landX = 20 + Math.random() * (boxRect.width - 64);
+    const landY = 20 + Math.random() * (boxRect.height - 64);
+    survivor.style.left = landX + 'px';
+    survivor.style.top  = landY + 'px';
+
+    const landTime = performance.now();
+
+    // Replace click handlers with decay-based handler
+    const newEl = survivor.cloneNode(true);
+    survivor.replaceWith(newEl);
+
+    function collectLanded(e) {
+      e.stopPropagation();
+      if (e.type === 'touchend') e.preventDefault();
+      const elapsed = performance.now() - landTime;
+      const idx = Math.min(Math.floor(elapsed / 500), SMILEY_DECAY.length - 1);
+      const value = SMILEY_DECAY[idx];
+      if (value > 0) {
+        for (let j = 0; j < value; j++) tickInput(+1);
+        const rect = newEl.getBoundingClientRect();
+        launchConfetti(rect.left - boxRect.left + 22, rect.top - boxRect.top + 22, value);
+        showPointsAnimation(parseFloat(newEl.style.left), parseFloat(newEl.style.top) - 10, value);
+      }
+      newEl.remove();
+    }
+    newEl.addEventListener('click', collectLanded);
+    newEl.addEventListener('touchend', collectLanded);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => { if (newEl.parentNode) newEl.remove(); }, 5000);
+  }, 800);
 }
 
 function resizeCanvases() {
@@ -1353,6 +1514,14 @@ function tickInput(dir) {
       launchConfetti(lastInputX - boxRect.left, lastInputY - boxRect.top, count);
     }
   }
+
+  // Smiley face power-ups at n >= 12 — fire at Fibonacci click counts
+  if (Math.abs(state.n) >= 12) {
+    smileyClickCounter++;
+    if (SMILEY_TRIGGERS.includes(smileyClickCounter)) {
+      launchSmileySpread(lastInputX, lastInputY);
+    }
+  }
 }
 
 function commitN(newN) {
@@ -1378,14 +1547,17 @@ function commitN(newN) {
   maybeSaveScore(newN);
   debouncedSaveProgress();
 
-  // Celebration: zoom-through animation on new high score (n >= 8)
-  if (isNewHigh && Math.abs(newN) >= 8) {
+  // Celebration: zoom-through animation on new high score (n >= 10)
+  if (isNewHigh && Math.abs(newN) >= 10) {
     playCelebration(Math.abs(newN));
   }
 
-  // Start flower power-ups at n >= 10
-  if (Math.abs(newN) >= 10) startFlowerSpawning();
+  // Flower power-ups at n >= 11
+  if (Math.abs(newN) >= 11) startFlowerSpawning();
   else stopFlowerSpawning();
+
+  // Reset smiley click counter on each level advance
+  smileyClickCounter = 0;
 }
 
 // ─── Celebration: smooth zoom in/out on new high ─────────────────

@@ -257,6 +257,41 @@ This is UI-level only — the admin whitelist is visible in the HTML source. Acc
 
 ---
 
+## Level progression — feature unlocks
+
+Level 8 · F(8) = 21 · Guest Account
+  On first reaching n=8, anonymous Firebase auth is created.
+  User gets a GuestAnimalNoun# pseudonym.
+  Score saved to Firestore, appears on leaderboard.
+  Progress (including sub-steps) persists across reloads.
+
+Level 9 · F(9) = 34 · Confetti
+  Every click spawns F(n) confetti particles (capped at 150).
+  Confetti appears at the click/tap position, or screen center for keyboard.
+  Canvas-based particle system with gravity, rotation, and alpha fade.
+
+Level 10 · F(10) = 55 · Celebration Zoom
+  On each new high n (n >= 10), a smooth zoom-in/zoom-out animation plays.
+  Two phases: unwind rotation to center, then rewind back.
+  Duration scales logarithmically from 2.5s to 5s.
+
+Level 11 · F(11) = 89 · Flower Power-ups
+  5-petal flowers spawn every 2-3 seconds on the canvas.
+  Each flower lasts 5 seconds if not clicked.
+  Click/tap a flower: +5 ticks, confetti burst, +5 floating animation.
+  Flowers stop spawning below n=11.
+
+Level 12 · F(12) = 144 · Smiley Face Power-ups
+  Smiley faces appear as confetti at sub-step click counts 3, 5, 8, 13, 21.
+  All smiley confetti disappear except one, which lands at a random spot.
+  Clicking while airborne: +55 ticks.
+  After landing, value decays every 500ms following Fibonacci sequence:
+    +34, +21, +13, +8, +5, +3, +2, +1, +1, +0
+  Landed smiley stays visible for 5 seconds, then fades.
+  Shows a +## floating animation on collection.
+
+---
+
 ## Style conventions
 
 - 2-space indent throughout
