@@ -1260,28 +1260,6 @@ function drawNumberLine() {
     }
   }
 
-  // ── Progress bar between current and target n ──────────────────
-  if (state.mode === 'fib-steps' && progress > 0) {
-    const fromCx = cellCentre(state.n);
-    const toCx   = cellCentre(targetN);
-    if (fromCx > -NL_CELL && toCx < W + NL_CELL) {
-      const barY = mid + 22;
-      const barW = Math.abs(toCx - fromCx);
-      const barX = Math.min(fromCx, toCx);
-      // Background bar
-      ctx.fillStyle = 'rgba(245,166,35,0.12)';
-      ctx.fillRect(barX, barY, barW, 4);
-      // Filled progress
-      ctx.fillStyle = 'rgba(245,166,35,0.6)';
-      ctx.fillRect(barX, barY, barW * progress, 4);
-      // % text
-      ctx.font = '600 10px JetBrains Mono, monospace';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(245,166,35,0.7)';
-      ctx.fillText(Math.round(progress * 100) + '%', (fromCx + toCx) / 2, barY + 6);
-    }
-  }
-
   // ── +/- indicator bubble ──────────────────────────────────────
   if (state.nlIndAlpha > 0.01) {
     const isPos = state.nlIndSign > 0;
@@ -1571,7 +1549,11 @@ function tickInput(dir) {
     state.subStep = 0;
     commitN(targetN);
   } else {
-    // Still building up — draw ghost state
+    // Still building up — scroll number line proportionally toward target
+    const progress = state.subStep / needed;
+    const fromX = state._nlw / 2 - state.n * NL_CELL - NL_CELL / 2;
+    const toX   = state._nlw / 2 - targetN * NL_CELL - NL_CELL / 2;
+    state.nlWorldX = fromX + (toX - fromX) * progress;
     drawSpiral();
     drawNumberLine();
     debouncedSaveProgress();
