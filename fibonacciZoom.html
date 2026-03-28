@@ -641,13 +641,12 @@ html, body {
       <div class="card-title" style="font-size:12px;margin-bottom:4px;">🏆 Leaderboard</div>
       <div id="mobileInfoLb"><div class="lb-empty" style="font-size:10px;">Loading...</div></div>
     </div>
-    <!-- Account (RIGHT) — with settings icon -->
-    <div class="card" style="position:relative;">
-      <button class="icon-btn" id="mobileSettingsBtn" title="Settings" style="position:absolute;top:6px;right:6px;width:26px;height:26px;font-size:13px;">⚙️</button>
+    <!-- Account (RIGHT) -->
+    <div class="card">
       <div id="mobileInfoAccount">
         <div class="user-name" id="mobileInfoName" style="font-size:13px;">—</div>
-        <div class="user-score" id="mobileInfoScore">Fibonacci Level: —</div>
-        <button class="auth-btn" id="mobileInfoSignIn" style="font-size:9px;padding:5px 6px;margin-top:4px;display:none;">
+        <div class="user-score" id="mobileInfoScore">Level: —</div>
+        <button class="auth-btn" id="mobileInfoSignIn" style="font-size:9px;padding:5px 6px;margin-top:4px;">
           <svg viewBox="0 0 24 24" style="width:14px;height:14px;flex-shrink:0;margin-right:4px;">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -1238,16 +1237,6 @@ function drawNumberLine() {
     ctx.fillStyle = `rgba(${baseR},${baseG},${baseB},${alpha})`;
     ctx.fillText(display, cx, mid - 16);
 
-    // Click count below center position only (replaces n=X labels)
-    if (isCenter && state.mode === 'fib-steps') {
-      const tN = state.n + state.stepDir;
-      const needed = stepsForN(tN);
-      ctx.font = '600 12px JetBrains Mono, monospace';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(245,166,35,0.8)';
-      ctx.fillText(`${state.subStep} / ${needed}`, cx, mid + 12);
-    }
-
     // Dot
     if (isCenter) {
       ctx.beginPath();
@@ -1272,6 +1261,16 @@ function drawNumberLine() {
       ctx.strokeStyle = `rgba(${baseR},${baseG},${baseB},${0.8 * progress})`;
       ctx.lineWidth = 2; ctx.stroke();
     }
+  }
+
+  // ── Click count — stationary at screen center below the line ───
+  if (state.mode === 'fib-steps') {
+    const tN = state.n + state.stepDir;
+    const needed = stepsForN(tN);
+    ctx.font = '600 13px JetBrains Mono, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(245,166,35,0.8)';
+    ctx.fillText(`${state.subStep} / ${needed}`, W / 2, mid + 14);
   }
 
   // ── +/- indicator bubble ──────────────────────────────────────
@@ -1928,11 +1927,6 @@ if (mobileInfoLbCard) {
     document.getElementById('mobileSheet').classList.add('open');
   });
 }
-// Mobile info row: settings button → open settings overlay
-const mobileSettingsBtn = document.getElementById('mobileSettingsBtn');
-if (mobileSettingsBtn) {
-  mobileSettingsBtn.addEventListener('click', () => openOverlay('settingsOverlay'));
-}
 
 // Sync mobile account button label with auth state
 function updateMobileAccountBtn() {
@@ -1974,12 +1968,14 @@ function syncMobileAuth() {
       const isAnon = currentUser.isAnonymous;
       const name = currentUser.displayName || 'Guest';
       infoName.textContent = name;
+      // Anonymous: show sign-in, hide sign-out. Google: show sign-out, hide sign-in.
       infoSignIn.style.display = isAnon ? '' : 'none';
       if (infoSignOut) infoSignOut.style.display = isAnon ? 'none' : '';
     } else {
       infoName.textContent = '—';
-      infoScore.textContent = 'Fibonacci Level: —';
-      infoSignIn.style.display = 'none';
+      infoScore.textContent = 'Level: —';
+      // Not authenticated: show sign-in
+      infoSignIn.style.display = '';
       if (infoSignOut) infoSignOut.style.display = 'none';
     }
   }
@@ -2373,9 +2369,9 @@ function updateUserBestDisplay(n) {
   document.getElementById('userBestScore').textContent = 'Best: ' + fibText;
   const mobileEl = document.getElementById('mobileUserBestScore');
   if (mobileEl) mobileEl.textContent = 'Best: ' + fibText;
-  // Mobile info row: "Fibonacci Level: X"
+  // Mobile info row: "Level: X"
   const infoScore = document.getElementById('mobileInfoScore');
-  if (infoScore) infoScore.textContent = 'Fibonacci Level: ' + fibText;
+  if (infoScore) infoScore.textContent = 'Level: ' + fibText;
 }
 
 function fibDisplayStr(n) {
